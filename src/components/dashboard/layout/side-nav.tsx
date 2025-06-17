@@ -49,30 +49,26 @@ export function SideNav(): React.JSX.Element {
       }}
     >
       <Stack spacing={2} sx={{ p: 3 }}>
-        <Box sx={{ display: 'inline-flex', alignItems: 'center'}}>
-          <Logo color="light" height={32} width={32} />
-          <Box
-          sx={{
-            alignItems: 'center',
-            backgroundColor: 'var(--mui-palette-neutral-950)',
-            display: 'flex',
-            p: '4px 12px',
-          }}
-        >
-          <Box sx={{ flex: '1 1 auto' }}>
-            <Typography sx={{color: '#BAB8B8', fontSize: '13px'}}>
-              国家重点项目
-            </Typography>
-            <Typography color="inherit" sx={{fontSize: '15px'}} >
-              面向复杂场景的图计算机
-            </Typography>
-            <Typography color="inherit" sx={{fontSize: '15px'}}>
-              (2023YFB4502300)
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+            <Logo color="light" height={36} width={36} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+            <Box sx={{ flex: '1 1 auto' }}>
+              <Typography sx={{color: '#BAB8B8', fontSize: '13px'}}>
+                国家重点项目
+              </Typography>
+              <Typography color="inherit" sx={{fontSize: '15px'}} >
+                面向复杂场景的图计算机
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+            <Typography color="inherit" sx={{fontSize: '13px'}}>
+              (2023YFB 4502300)
             </Typography>
           </Box>
-         </Box>
         </Box>
-
       </Stack>
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
       <Box component="nav" sx={{ flex: '1 1 auto', p: '12px' }}>
@@ -128,7 +124,6 @@ function NavItem({ disabled, external, href, pathname, title }: NavItemProps): R
           p: '4px 12px',
           position: 'relative',
           textDecoration: 'none',
-          whiteSpace: 'nowrap',
           ...(disabled && {
             bgcolor: 'var(--NavItem-disabled-background)',
             color: 'var(--NavItem-disabled-color)',
@@ -140,7 +135,14 @@ function NavItem({ disabled, external, href, pathname, title }: NavItemProps): R
         <Box sx={{ flex: '1 1 auto' }}>
           <Typography
             component="span"
-            sx={{ color: 'inherit', fontSize: '0.875rem', fontWeight: 500, lineHeight: '28px' }}
+            sx={{ 
+              color: 'inherit', 
+              fontSize: '0.875rem', 
+              fontWeight: 500, 
+              lineHeight: '1.2',
+              whiteSpace: 'normal',
+              wordBreak: 'break-word'
+            }}
           >
             {title}
           </Typography>
