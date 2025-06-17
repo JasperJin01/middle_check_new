@@ -103,15 +103,8 @@ interface NavItemProps extends NavItemConfig {
   pathname: string;
 }
 
-function NavItem({ disabled, external, href, pathname, title, subItems }: NavItemProps): React.JSX.Element {
-  const active = isNavItemActive({ href, pathname, subItems });
-
-  const [open, setOpen] = useState(false);
-  const handleClick = (): void => {
-    if (subItems && subItems.length > 0) {
-      setOpen(!open);
-    }
-  };
+function NavItem({ disabled, external, href, pathname, title }: NavItemProps): React.JSX.Element {
+  const active = isNavItemActive({ href, pathname });
 
   return (
     <Box sx={{margin: '4px 0 4px 0'}}>
@@ -143,7 +136,6 @@ function NavItem({ disabled, external, href, pathname, title, subItems }: NavIte
           }),
           ...(active && { bgcolor: 'var(--NavItem-active-background)', color: 'var(--NavItem-active-color)' }),
         }}
-        onClick={handleClick}
       >
         <Box sx={{ flex: '1 1 auto' }}>
           <Typography
@@ -153,29 +145,7 @@ function NavItem({ disabled, external, href, pathname, title, subItems }: NavIte
             {title}
           </Typography>
         </Box>
-        {subItems && subItems.length > 0 ? (
-          <Box
-            component="span"
-            sx={{
-              alignItems: 'center',
-              display: 'flex',
-              justifyContent: 'center',
-              flex: '0 0 auto',
-              fontSize: 'var(--icon-fontSize-md)',
-            }}
-          >
-            {open ? <CaretUp /> : <CaretDown />}
-          </Box>
-        ) : null}
       </Box>
-      {subItems && subItems.length > 0 ? <Collapse in={open}>
-          <Box sx={{ pl: 3 }}>
-            {subItems.map((subItem) => (
-              // @ts-expect-error subItem won't have the same key with the parent item
-              <NavItem key={subItem.key} pathname={pathname} {...subItem} />
-            ))}
-          </Box>
-        </Collapse> : null}
     </Box>
   );
 }
