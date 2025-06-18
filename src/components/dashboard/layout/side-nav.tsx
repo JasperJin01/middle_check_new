@@ -36,45 +36,42 @@ export function SideNav(): React.JSX.Element {
         bgcolor: 'var(--SideNav-background)',
         color: 'var(--SideNav-color)',
         display: { xs: 'none', lg: 'flex' },
-        flexDirection: 'column',
-        height: '100%',
+        flexDirection: 'row',
+        height: 'var(--SideNav-height)',
         left: 0,
+        right: 0,
         maxWidth: '100%',
         position: 'fixed',
         scrollbarWidth: 'none',
         top: 0,
-        width: 'var(--SideNav-width)',
         zIndex: 'var(--SideNav-zIndex)',
         '&::-webkit-scrollbar': { display: 'none' },
+        alignItems: 'center',
+        px: 3,
       }}
     >
-      <Stack spacing={2} sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-            <Logo color="light" height={36} width={36} />
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-            <Box sx={{ flex: '1 1 auto' }}>
-              <Typography sx={{color: '#BAB8B8', fontSize: '13px'}}>
-                国家重点项目
-              </Typography>
-              <Typography color="inherit" sx={{fontSize: '15px'}} >
-                面向复杂场景的图计算机
-              </Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-            <Typography color="inherit" sx={{fontSize: '13px'}}>
-              (2023YFB 4502300)
-            </Typography>
-          </Box>
+      {/* 左侧项目信息 */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: '300px' }}>
+        <Logo color="light" height={32} width={32} />
+        <Box>
+          <Typography sx={{color: '#BAB8B8', fontSize: '12px'}}>
+            国家重点项目
+          </Typography>
+          <Typography color="inherit" sx={{fontSize: '14px'}} >
+            面向复杂场景的图计算机
+          </Typography>
+          <Typography color="inherit" sx={{fontSize: '11px'}}>
+            (2023YFB4502300)
+          </Typography>
         </Box>
-      </Stack>
-      <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
-      <Box component="nav" sx={{ flex: '1 1 auto', p: '12px' }}>
+      </Box>
+
+      <Divider orientation="vertical" sx={{ borderColor: 'var(--mui-palette-neutral-700)', mx: 2 }} />
+      
+      {/* 右侧导航项 */}
+      <Box component="nav" sx={{ flex: '1 1 auto', display: 'flex', alignItems: 'center' }}>
         {renderNavItems({ pathname, items: navItems })}
       </Box>
-      <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
     </Box>
   );
 }
@@ -89,7 +86,7 @@ function renderNavItems({ items = [], pathname }: { items?: NavItemConfig[]; pat
   }, []);
 
   return (
-    <Stack component="ul" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0 }}>
+    <Stack component="ul" direction="row" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0 }}>
       {children}
     </Stack>
   );
@@ -103,7 +100,7 @@ function NavItem({ disabled, external, href, pathname, title }: NavItemProps): R
   const active = isNavItemActive({ href, pathname });
 
   return (
-    <Box sx={{margin: '4px 0 4px 0'}}>
+    <Box sx={{margin: '0 4px'}}>
       <Box
         {...(href
           ? {
@@ -121,7 +118,7 @@ function NavItem({ disabled, external, href, pathname, title }: NavItemProps): R
           display: 'flex',
           flex: '0 0 auto',
           gap: 1,
-          p: '4px 12px',
+          p: '8px 16px',
           position: 'relative',
           textDecoration: 'none',
           ...(disabled && {

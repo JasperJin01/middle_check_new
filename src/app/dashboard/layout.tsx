@@ -17,7 +17,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
           body: {
             '--MainNav-height': '56px',
             '--MainNav-zIndex': 1000,
-            '--SideNav-width': '150px',
+            '--SideNav-height': '70px',
             '--SideNav-zIndex': 1100,
             '--MobileNav-width': '320px',
             '--MobileNav-zIndex': 1100,
@@ -34,9 +34,14 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
         }}
       >
         <SideNav />
-        <Box sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', pl: { lg: 'var(--SideNav-width)'  } }}>
+        <Box sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', pt: { lg: 'var(--SideNav-height)' } }}>
           <main>
-            <Container maxWidth="xl" sx={{ padding: '32px 32px 32px 32px', margin: '32px auto 20px auto', backgroundColor: '#f5f7fa' }}>
+            <Container maxWidth={false} 
+            sx={{ padding: '0px 4px 8px 4px', 
+            margin: '8px auto 20px auto', 
+            backgroundColor: '#f5f7fa', 
+            maxWidth: '100%',
+            borderRadius: '16px' }}>
               {children}
             </Container>
           </main>
