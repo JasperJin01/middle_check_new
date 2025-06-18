@@ -19,7 +19,7 @@ const Page = () => {
   const [hoveredModule, setHoveredModule] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [activeModules, setActiveModules] = useState([]);
-  const [selectedAlgorithm, setSelectedAlgorithm] = useState('');
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState('custom');
   const [selectedDataset, setSelectedDataset] = useState('');
   const [showMiddlePanel, setShowMiddlePanel] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
@@ -193,11 +193,15 @@ const Page = () => {
                 onChange={handleAlgorithmChange}
                 sx={{ fontSize: '1.1rem' }}
               >
-                <MenuItem value="bfs">BFS (广度优先搜索)</MenuItem>
-                <MenuItem value="dfs">DFS (深度优先搜索)</MenuItem>
-                <MenuItem value="sssp">SSSP (单源最短路径)</MenuItem>
-                <MenuItem value="pagerank">PageRank</MenuItem>
-                <MenuItem value="triangle">Triangle Counting</MenuItem>
+                <MenuItem value="bfs">BFS</MenuItem>
+                <MenuItem value="sssp">SSSP</MenuItem>
+                <MenuItem value="wcc">WCC</MenuItem>
+                <MenuItem value="kcore">K-Core</MenuItem>
+                <MenuItem value="kclique">K-Clique</MenuItem>
+                <MenuItem value="ppr">PPR</MenuItem>
+                <MenuItem value="gcn">GCN</MenuItem>
+                <MenuItem value="custom">模版</MenuItem>
+                <MenuItem value="framework">框架转换生成</MenuItem>
               </Select>
             </FormControl>
 
