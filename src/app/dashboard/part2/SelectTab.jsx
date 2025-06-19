@@ -1,5 +1,5 @@
 // src/components/CustomTabs.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Tabs, 
   Tab, 
@@ -37,40 +37,68 @@ function TabPanel(props) {
 }
 
 // 主组件
-const SelectTab = ({ activeTab, selectedAlgorithm, selectedDataset, panelType, activeModules }) => {
-  const [tabValue, setTabValue] = useState(0);
+const SelectTab = ({ 
+  activeTab, 
+  selectedAlgorithm, 
+  selectedDataset, 
+  panelType, 
+  activeModules,
+  editedCodes = {},
+  onCodeChange
+}) => {
+  const [tabValue, setTabValue] = useState(-1); // 初始值为-1，表示没有选中任何选项卡
+  const [visibleTabs, setVisibleTabs] = useState([]); // 记录哪些选项卡是可见的
   const [selectedFramework, setSelectedFramework] = useState('');
   const [selectedExistingAlgorithm, setSelectedExistingAlgorithm] = useState('');
-  const [editedCodes, setEditedCodes] = useState({});
+  // 保存原始代码的引用，用于重置
+  const originalCodesRef = useRef({
+    'device-cga': codeData['device-cga']['custom'],
+    'host-code': codeData['host-code']['default'],
+    'graph-ir': codeData['graph-ir']['bfs'],
+    'matrix-ir': codeData['matrix-ir']['bfs'], 
+    'hardware-instruction': codeData['hardware-instruction']['bfs']
+  });
+  
+  // 存储选项卡配置
+  const tabsConfig = useRef({
+    middle: [
+      { id: 'device-cga', label: '设备端CGA代码' },
+      { id: 'host-code', label: '主机端代码' }
+    ],
+    right: [
+      { id: 'existing-framework', label: '现有图计算框架' },
+      { id: 'graph-ir', label: 'GraphIR' },
+      { id: 'matrix-ir', label: 'MatrixIR' },
+      { id: 'hardware-instruction', label: '硬件指令' }
+    ]
+  }).current;
 
   const handleCodeChange = (newCode, key) => {
-    setEditedCodes(prev => ({
-      ...prev,
-      [key]: newCode
-    }));
+    if (onCodeChange) {
+      onCodeChange(newCode, key);
+    }
+  };
+
+  // 获取选项卡索引
+  const getTabIndex = (tab) => {
+    const tabList = panelType === 'middle' ? tabsConfig.middle : tabsConfig.right;
+    return tabList.findIndex(item => item.id === tab);
   };
 
   // 根据activeModules和activeTab决定显示哪个选项卡
   useEffect(() => {
-    if (panelType === 'right') {
-      if (activeTab === 'existing-framework') {
-        setTabValue(0); // 强制切换到"现有图计算框架"标签
-      } else if (activeTab === 'graph-ir') {
-        setTabValue(1); // 强制切换到"GraphIR"标签
-      } else if (activeTab === 'matrix-ir') {
-        setTabValue(2); // 强制切换到"MatrixIR"标签
-      } else if (activeTab === 'hardware-instruction') {
-        setTabValue(3); // 强制切换到"硬件指令"标签
+    if (!activeTab) return;
+    
+    const tabIndex = getTabIndex(activeTab);
+    if (tabIndex !== -1) {
+      // 如果这个选项卡还没有显示，添加到可见选项卡列表
+      if (!visibleTabs.includes(tabIndex)) {
+        setVisibleTabs(prev => [...prev, tabIndex].sort((a, b) => a - b));
       }
-    } else if (panelType === 'middle') {
-      // 中间面板保持默认的选项卡显示
-      if (activeTab === 'device-cga') {
-        setTabValue(0);
-      } else if (activeTab === 'host-code') {
-        setTabValue(1);
-      }
+      // 切换到这个选项卡
+      setTabValue(visibleTabs.indexOf(tabIndex) !== -1 ? visibleTabs.indexOf(tabIndex) : visibleTabs.length);
     }
-  }, [activeModules, activeTab, panelType]);
+  }, [activeTab, panelType, visibleTabs]);
 
   const handleChange = (event, newValue) => {
     setTabValue(newValue);
@@ -120,102 +148,187 @@ const SelectTab = ({ activeTab, selectedAlgorithm, selectedDataset, panelType, a
     }
   };
 
+  // 获取要显示的代码内容
+  const getCodeContent = (codeType, algorithm = selectedAlgorithm) => {
+    // 特殊处理模板代码
+    if (codeType === 'device-cga' && algorithm === 'custom') {
+      // 如果存在已编辑的模板代码，返回它
+      if (editedCodes['device-cga']) {
+        return editedCodes['device-cga'];
+      }
+      // 否则返回原始模板代码
+      return codeData['device-cga']['custom'];
+    }
+
+    // 对于非模板情况，使用对应算法的代码
+    if (codeType === 'device-cga') {
+      return codeData[codeType][algorithm || 'custom'];
+    } else if (codeType === 'host-code') {
+      return codeData[codeType]['default'];
+    } else if (['graph-ir', 'matrix-ir', 'hardware-instruction'].includes(codeType)) {
+      return codeData[codeType][algorithm] || codeData[codeType]['bfs'];
+    }
+    
+    return '代码不可用';
+  };
+
+  // 获取原始代码用于重置
+  const getOriginalCode = (codeType) => {
+    return originalCodesRef.current[codeType];
+  };
+
+  // 创建选项卡
+  const renderTabs = () => {
+    const tabList = panelType === 'middle' ? tabsConfig.middle : tabsConfig.right;
+    
+    // 根据visibleTabs筛选出要显示的标签
+    const visibleTabItems = visibleTabs
+      .map(index => tabList[index])
+      .filter(Boolean);
+      
+    if (visibleTabItems.length === 0) {
+      return null;
+    }
+    
+    return (
+      <Tabs value={tabValue} onChange={handleChange}>
+        {visibleTabItems.map((tab, index) => (
+          <Tab key={tab.id} label={tab.label} />
+        ))}
+      </Tabs>
+    );
+  };
+
   // 根据activeTab和panelType决定显示什么内容
   const renderContent = () => {
+    if (tabValue === -1 || visibleTabs.length === 0) {
+      return (
+        <Box sx={{ 
+          width: '100%', 
+          height: '100%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center'
+        }}>
+          <Typography variant="body1" color="text.secondary">
+            请从左侧流程图选择需要查看的内容
+          </Typography>
+        </Box>
+      );
+    }
+
+    const tabList = panelType === 'middle' ? tabsConfig.middle : tabsConfig.right;
+    const currentTabId = tabList[visibleTabs[tabValue]]?.id;
+    
     if (panelType === 'middle') {
       return (
         <Box sx={{ width: '100%' }}>
-          <Tabs value={tabValue} onChange={handleChange}>
-            <Tab label="设备端CGA代码" />
-            <Tab label="主机端代码" />
-          </Tabs>
+          {renderTabs()}
           
-          <TabPanel value={tabValue} index={0}>
-            <CodeDisplay 
-              code={editedCodes['device-cga'] || codeData['device-cga'][selectedAlgorithm || 'custom']} 
-              onCodeChange={(newCode) => handleCodeChange(newCode, 'device-cga')}
-              editable={selectedAlgorithm === 'custom'}
-            />
-          </TabPanel>
+          {currentTabId === 'device-cga' && (
+            <TabPanel value={tabValue} index={tabValue}>
+              <CodeDisplay 
+                code={selectedAlgorithm === 'custom' && editedCodes['device-cga'] ? editedCodes['device-cga'] : getCodeContent('device-cga')} 
+                originalCode={getOriginalCode('device-cga')}
+                onCodeChange={(newCode) => handleCodeChange(newCode, 'device-cga')}
+                editable={selectedAlgorithm === 'custom'}
+                language="python"
+              />
+            </TabPanel>
+          )}
 
-          <TabPanel value={tabValue} index={1}>
-            <CodeDisplay 
-              code={editedCodes['host-code'] || codeData['host-code']['default']} 
-              onCodeChange={(newCode) => handleCodeChange(newCode, 'host-code')}
-              editable={false}
-            />
-          </TabPanel>
+          {currentTabId === 'host-code' && (
+            <TabPanel value={tabValue} index={tabValue}>
+              <CodeDisplay 
+                code={getCodeContent('host-code')} 
+                originalCode={getOriginalCode('host-code')}
+                onCodeChange={(newCode) => handleCodeChange(newCode, 'host-code')}
+                editable={false}
+                language="cpp"
+              />
+            </TabPanel>
+          )}
         </Box>
       );
     } else if (panelType === 'right') {
       return (
         <Box sx={{ width: '100%' }}>
-          <Tabs value={tabValue} onChange={handleChange}>
-            <Tab label="现有图计算框架" />
-            <Tab label="GraphIR" />
-            <Tab label="MatrixIR" />
-            <Tab label="硬件指令" />
-          </Tabs>
+          {renderTabs()}
           
-          <TabPanel value={tabValue} index={0}>
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <FormControl sx={{ flex: 1 }}>
-                <InputLabel sx={{ fontSize: '1rem' }}>框架选择</InputLabel>
-                <Select
-                  value={selectedFramework}
-                  label="框架选择"
-                  onChange={handleFrameworkChange}
-                  sx={{ fontSize: '0.9rem' }}
-                >
-                  <MenuItem value="graphscope">GraphScope</MenuItem>
-                  <MenuItem value="dgl">DGL</MenuItem>
-                </Select>
-              </FormControl>
-              
-              <FormControl sx={{ flex: 1 }}>
-                <InputLabel sx={{ fontSize: '1rem' }}>算法选择</InputLabel>
-                <Select
-                  value={selectedExistingAlgorithm}
-                  label="算法选择"
-                  onChange={handleExistingAlgorithmChange}
-                  sx={{ fontSize: '0.9rem' }}
-                  disabled={!selectedFramework}
-                >
-                  {getAlgorithmOptions()}
-                </Select>
-              </FormControl>
-            </Box>
+          {currentTabId === 'existing-framework' && (
+            <TabPanel value={tabValue} index={tabValue}>
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <FormControl sx={{ flex: 1 }}>
+                  <InputLabel sx={{ fontSize: '1rem' }}>框架选择</InputLabel>
+                  <Select
+                    value={selectedFramework}
+                    label="框架选择"
+                    onChange={handleFrameworkChange}
+                    sx={{ fontSize: '0.9rem' }}
+                  >
+                    <MenuItem value="graphscope">GraphScope</MenuItem>
+                    <MenuItem value="dgl">DGL</MenuItem>
+                  </Select>
+                </FormControl>
+                
+                <FormControl sx={{ flex: 1 }}>
+                  <InputLabel sx={{ fontSize: '1rem' }}>算法选择</InputLabel>
+                  <Select
+                    value={selectedExistingAlgorithm}
+                    label="算法选择"
+                    onChange={handleExistingAlgorithmChange}
+                    sx={{ fontSize: '0.9rem' }}
+                    disabled={!selectedFramework}
+                  >
+                    {getAlgorithmOptions()}
+                  </Select>
+                </FormControl>
+              </Box>
 
-            <CodeDisplay 
-              code={editedCodes['existing-framework'] || getFrameworkCode()} 
-              onCodeChange={(newCode) => handleCodeChange(newCode, 'existing-framework')}
-              editable={false}
-            />
-          </TabPanel>
+              <CodeDisplay 
+                code={editedCodes['existing-framework'] || getFrameworkCode()} 
+                onCodeChange={(newCode) => handleCodeChange(newCode, 'existing-framework')}
+                editable={false}
+                language="python"
+              />
+            </TabPanel>
+          )}
           
-          <TabPanel value={tabValue} index={1}>
-            <CodeDisplay 
-              code={editedCodes['graph-ir'] || codeData['graph-ir'][selectedAlgorithm] || codeData['graph-ir']['bfs']} 
-              onCodeChange={(newCode) => handleCodeChange(newCode, 'graph-ir')}
-              editable={false}
-            />
-          </TabPanel>
+          {currentTabId === 'graph-ir' && (
+            <TabPanel value={tabValue} index={tabValue}>
+              <CodeDisplay 
+                code={getCodeContent('graph-ir')} 
+                originalCode={getOriginalCode('graph-ir')}
+                onCodeChange={(newCode) => handleCodeChange(newCode, 'graph-ir')}
+                editable={false}
+                language="mlir"
+              />
+            </TabPanel>
+          )}
           
-          <TabPanel value={tabValue} index={2}>
-            <CodeDisplay 
-              code={editedCodes['matrix-ir'] || codeData['matrix-ir'][selectedAlgorithm] || codeData['matrix-ir']['bfs']} 
-              onCodeChange={(newCode) => handleCodeChange(newCode, 'matrix-ir')}
-              editable={false}
-            />
-          </TabPanel>
+          {currentTabId === 'matrix-ir' && (
+            <TabPanel value={tabValue} index={tabValue}>
+              <CodeDisplay 
+                code={getCodeContent('matrix-ir')} 
+                originalCode={getOriginalCode('matrix-ir')}
+                onCodeChange={(newCode) => handleCodeChange(newCode, 'matrix-ir')}
+                editable={false}
+                language="mlir"
+              />
+            </TabPanel>
+          )}
           
-          <TabPanel value={tabValue} index={3}>
-            <CodeDisplay 
-              code={editedCodes['hardware-instruction'] || codeData['hardware-instruction'][selectedAlgorithm] || codeData['hardware-instruction']['bfs']} 
-              onCodeChange={(newCode) => handleCodeChange(newCode, 'hardware-instruction')}
-              editable={false}
-            />
-          </TabPanel>
+          {currentTabId === 'hardware-instruction' && (
+            <TabPanel value={tabValue} index={tabValue}>
+              <CodeDisplay 
+                code={getCodeContent('hardware-instruction')} 
+                originalCode={getOriginalCode('hardware-instruction')}
+                onCodeChange={(newCode) => handleCodeChange(newCode, 'hardware-instruction')}
+                editable={false}
+                language="hardware"
+              />
+            </TabPanel>
+          )}
         </Box>
       );
     }

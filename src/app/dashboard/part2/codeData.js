@@ -4,8 +4,12 @@ export const codeData = {
       'bfs': `from graph_dsl import *
 
 class BFSKernel(GraphTraversalKernel):
-  def __init__(self, dev_graph : Graph, dev_depth : vec_int, dev_root : int):                  
-    super().__init__(dev_graph, CHANGED_MODE, PUSH, DEFAULT_EDGE_PROP)
+  def __init__(self, 
+               dev_graph : Graph, 
+               dev_depth : vec_int, 
+               dev_root : int):                  
+    super().__init__(dev_graph, CHANGED_MODE, 
+                     PUSH, DEFAULT_EDGE_PROP)
     self.root : int = dev_root
     self.depth : vec_int = dev_depth
 
@@ -27,15 +31,62 @@ class BFSKernel(GraphTraversalKernel):
   
   def apply(self):
     self.depth = min(self.depth, self.CGAprop.res)
-    return self.depth
-`,
+    return self.depth`,
       'sssp': '// 这里应该是SSSP的CGA代码',
       'wcc': '// 这里应该是WCC的CGA代码',
       'kcore': '// 这里应该是K-Core的CGA代码',
       'kclique': '// 这里应该是K-Clique的CGA代码',
       'ppr': '// 这里应该是PPR的CGA代码',
       'gcn': '// 这里应该是GCN的CGA代码',
-      'custom': '// 这里应该是模版代码',
+      'custom': `from graph_dsl import *
+
+class GraphAlgorithm(GraphTraversalKernel):
+    """图算法演示模板"""
+
+    def __init__(self, graph: Graph, ​**kwargs):
+        """
+        初始化图数据和算法参数
+        - graph: 输入的图结构
+        - kwargs: 其他可选参数（如距离、标签、起始点、遍历方向等）
+        """
+        super().__init__(graph, ​**kwargs)
+        self.graph = graph
+
+        # 初始化算法控制参数
+        self.frontier = ...  # 遍历边界
+        self.max_iter = ...  # 最大迭代次数
+
+    def gather_mult(self, msg, weight):
+        """
+        定义边上的计算逻辑
+        - msg: 从源顶点发送的值
+        - weight: 边权重
+        - 返回: 传递给目标顶点的值
+        """
+        pass
+
+    def gather_add(self, res1, res2):
+        """
+        定义顶点上的聚合逻辑
+        - res1, res2: 来自不同边的计算结果
+        - 返回: 聚合后的值（如 min/max/sum）
+        """
+        pass
+
+    def apply(self):
+        """
+        定义每次迭代后如何更新顶点属性
+        - 通常合并临时结果到主属性（如 self.prop）
+        """
+        pass
+
+    def construct(self):
+        """
+        定义算法的返回值
+        - 通常返回顶点属性（如距离数组、标签数组等）
+        - 可在此方法中对结果做最终处理
+        """
+        pass`,
       'framework': '// 这里应该是框架转换生成的代码'
     },
     'host-code': {

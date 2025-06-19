@@ -29,6 +29,7 @@ const Page = () => {
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [activeTab, setActiveTab] = useState('');
   const [showBottomPanels, setShowBottomPanels] = useState(false);
+  const [editedCodes, setEditedCodes] = useState({});
 
   // 定义按钮坐标和尺寸
   const modules = {
@@ -119,7 +120,11 @@ const Page = () => {
   };
 
   const handleAlgorithmChange = (event) => {
-    setSelectedAlgorithm(event.target.value);
+    const newAlgorithm = event.target.value;
+    setSelectedAlgorithm(newAlgorithm);
+    
+    // 新的逻辑：不需要清除已编辑的代码
+    // 这样切换回模板时，可以保持之前编辑过的内容
   };
 
   const handleDatasetChange = (event) => {
@@ -128,6 +133,15 @@ const Page = () => {
 
   const toggleBottomPanels = () => {
     setShowBottomPanels(prev => !prev);
+  };
+
+  // 处理代码编辑
+  const handleCodeChange = (newCode, key) => {
+    console.log(`Code changed for ${key}:`, newCode.substring(0, 20) + '...');
+    setEditedCodes(prev => ({
+      ...prev,
+      [key]: newCode
+    }));
   };
 
   return (
@@ -229,6 +243,8 @@ const Page = () => {
                       selectedAlgorithm={selectedAlgorithm}
                       panelType="middle"
                       activeModules={activeModules}
+                      editedCodes={editedCodes}
+                      onCodeChange={handleCodeChange}
                     />
                   </Paper>
                 ) : (
@@ -285,6 +301,8 @@ const Page = () => {
                       selectedDataset={selectedDataset}
                       panelType="right"
                       activeModules={activeModules}
+                      editedCodes={editedCodes}
+                      onCodeChange={handleCodeChange}
                     />
                   </Paper>
                 ) : (
