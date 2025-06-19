@@ -24,7 +24,7 @@ import 'prismjs/components/prism-bash';
 const customPrismStyles = `
   pre[class*="language-"], code[class*="language-"] {
     font-size: 0.85rem !important;
-    background-color: #f8f8f8 !important;
+    background-color: #fbfbfb !important;
   }
   .token {
     font-size: 0.75rem !important;
@@ -63,7 +63,7 @@ const CodeDisplay = ({ code, onCodeChange, editable = false, originalCode = null
           prismLanguage = 'cpp';
         } else if (language === 'hardware') {
           // 硬件指令使用普通文本
-          prismLanguage = 'plaintext';
+          prismLanguage = 'wasm';
         }
 
         const highlighted = Prism.highlight(
@@ -158,7 +158,7 @@ const CodeDisplay = ({ code, onCodeChange, editable = false, originalCode = null
             flexGrow: 1,
             width: '100%',
             height: '100%',
-            maxHeight: '500px',
+            maxHeight: '550px',
             overflow: 'auto',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
@@ -194,7 +194,7 @@ const CodeDisplay = ({ code, onCodeChange, editable = false, originalCode = null
             flexGrow: 1,
             width: '100%',
             height: '100%',
-            maxHeight: '500px',
+            maxHeight: '580px',
             overflow: 'auto',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
