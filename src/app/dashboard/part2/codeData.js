@@ -490,7 +490,10 @@ module {
     graph.return %7 : tensor<?x?xf32>
     return
   }
-}`
+}`,
+      'custom': `图遍历算法为统一编程框架CGA实现
+经过编译器前端修改生成GraphIR代码`,
+      'framework': `// 这里应该是框架转换生成的代码`
     },
     'matrix-ir': {
       'bfs': `// 这是BFS的MatrixIR代码
@@ -600,8 +603,7 @@ module {
     matrix.SNOP
     return
   }
-}
-`,
+}`,
       'sssp': `// 这是SSSP的MatrixIR代码
 module {
   func.func @GraphTraversalKernel() {
@@ -1070,8 +1072,10 @@ module {
     graph.return %9 : tensor<?x?xf32>
     return
   }
-}
-`
+}`,
+      'custom': `经过图-矩阵转换及编译优化后
+生成MatrixIR中间代码`,
+      'framework': '// 这里应该是框架转换生成的代码'
     },
     'hardware-instruction': {
       'bfs': `% BFS的硬件指令代码
@@ -2008,8 +2012,9 @@ SNOP
 SNOP
 SNOP
 SNOP
-`
-
+`,
+      'custom': `编译器后端处理MatrixIR代码
+生成硬件指令代码`
     },
     'existing-framework': {
       'graphscope': {
@@ -2041,8 +2046,7 @@ class BFS_Pregel(AppAssets):
         for e in edges:
           # gather_mult
           v.send(e.vertex(), v.value + 1)
-    v.vote_to_halt()
-`,
+    v.vote_to_halt()`,
         'sssp': `# 这里是GraphScope的SSSP代码
 # decorator, and assign the types for vertex data, 
 # message data.
@@ -2075,8 +2079,7 @@ class SSSP_Pregel(AppAssets):
         for e in edges:
           # gather_mult
           v.send(e.vertex(), new_dist + e.get_int(2))
-          # v.send(e.vertex(), new_dist + e.weight())
-`,
+          # v.send(e.vertex(), new_dist + e.weight())`,
         'ppr': `# 这里是GraphScope的PPR代码
 // GraphScope PPR示例代码
 import graphscope as gs

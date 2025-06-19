@@ -30,6 +30,7 @@ const Page = () => {
   const [activeTab, setActiveTab] = useState('');
   const [showBottomPanels, setShowBottomPanels] = useState(false);
   const [editedCodes, setEditedCodes] = useState({});
+  const [animatedTabs, setAnimatedTabs] = useState([]);
   const imageRef = useRef(null);
   const [scaleFactor, setScaleFactor] = useState({ scaleX: 1, scaleY: 1 });
   
@@ -173,16 +174,19 @@ const Page = () => {
       case '编译器前端':
         setShowRightPanel(true);
         setActiveTab('graph-ir');
+        setAnimatedTabs(prev => [...new Set([...prev, 'graph-ir'])]);
         setActiveModules(prev => [...new Set([...prev, module])]);
         break;
       case '图-矩阵转换及编译优化':
         setShowRightPanel(true);
         setActiveTab('matrix-ir');
+        setAnimatedTabs(prev => [...new Set([...prev, 'matrix-ir'])]);
         setActiveModules(prev => [...new Set([...prev, module])]);
         break;
       case '编译器后端':
         setShowRightPanel(true);
         setActiveTab('hardware-instruction');
+        setAnimatedTabs(prev => [...new Set([...prev, 'hardware-instruction'])]);
         setActiveModules(prev => [...new Set([...prev, module])]);
         break;
       case '主机端代码':
@@ -325,6 +329,7 @@ const Page = () => {
                       activeModules={activeModules}
                       editedCodes={editedCodes}
                       onCodeChange={handleCodeChange}
+                      animatedTabs={animatedTabs}
                     />
                   </Paper>
                 ) : (
@@ -383,6 +388,7 @@ const Page = () => {
                       activeModules={activeModules}
                       editedCodes={editedCodes}
                       onCodeChange={handleCodeChange}
+                      animatedTabs={animatedTabs}
                     />
                   </Paper>
                 ) : (

@@ -2,7 +2,7 @@ import { Box, IconButton, Tooltip, Stack } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Prism from 'prismjs';
 
 // 引入 Prism 的浅色主题样式
@@ -29,17 +29,44 @@ const customPrismStyles = `
   .token {
     font-size: 0.75rem !important;
   }
+  
+  .code-line {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  
+  .code-line.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 `;
 
-const CodeDisplay = ({ code, onCodeChange, editable = false, originalCode = null, language = 'cpp' }) => {
+const CodeDisplay = ({ 
+  code, 
+  onCodeChange, 
+  editable = false, 
+  originalCode = null, 
+  language = 'cpp',
+  animated = false
+}) => {
   const [isEditable, setIsEditable] = useState(false);
   const [editedCode, setEditedCode] = useState(code);
   const [highlightedCode, setHighlightedCode] = useState('');
+  const [linesDisplayed, setLinesDisplayed] = useState(0);
+  const [codeLines, setCodeLines] = useState([]);
+  const containerRef = useRef(null);
 
   // 当传入的code变化时更新本地状态
   useEffect(() => {
     setEditedCode(code);
-  }, [code]);
+    // 如果有动画效果，初始时重置已显示的行数
+    if (animated) {
+      setLinesDisplayed(0);
+      // 将代码分割成行
+      setCodeLines((code || '').split('\n'));
+    }
+  }, [code, animated]);
 
   // 添加自定义样式到DOM
   useEffect(() => {
@@ -51,6 +78,29 @@ const CodeDisplay = ({ code, onCodeChange, editable = false, originalCode = null
       document.head.removeChild(style);
     };
   }, []);
+
+  // 动画效果：逐行显示代码
+  useEffect(() => {
+    if (!animated || codeLines.length === 0) return;
+
+    // 根据代码长度决定显示速度和每次显示的行数
+    const isLongCode = codeLines.length > 30;
+    const linesPerStep = isLongCode ? 3 : 1;
+    const intervalTime = isLongCode ? 50 : 80;
+    
+    const interval = setInterval(() => {
+      setLinesDisplayed(prev => {
+        const newValue = prev + linesPerStep;
+        if (newValue >= codeLines.length) {
+          clearInterval(interval);
+          return codeLines.length;
+        }
+        return newValue;
+      });
+    }, intervalTime);
+
+    return () => clearInterval(interval);
+  }, [animated, codeLines]);
 
   // 当代码或语言变化时，更新高亮代码
   useEffect(() => {
@@ -66,18 +116,43 @@ const CodeDisplay = ({ code, onCodeChange, editable = false, originalCode = null
           prismLanguage = 'wasm';
         }
 
-        const highlighted = Prism.highlight(
-          editedCode || '',
-          Prism.languages[prismLanguage] || Prism.languages.plaintext,
-          prismLanguage
-        );
-        setHighlightedCode(highlighted);
+        if (animated) {
+          // 如果是动画模式，只高亮已显示的行
+          const visibleCode = codeLines.slice(0, linesDisplayed).join('\n');
+          const highlighted = Prism.highlight(
+            visibleCode || '',
+            Prism.languages[prismLanguage] || Prism.languages.plaintext,
+            prismLanguage
+          );
+          
+          // 将高亮的HTML包装在span中，添加动画类
+          let formattedHtml = '';
+          const lines = highlighted.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            formattedHtml += `<span class="code-line visible">${lines[i]}</span>\n`;
+          }
+
+          // 添加剩余未显示的行，但不高亮且不可见
+          for (let i = linesDisplayed; i < codeLines.length; i++) {
+            formattedHtml += `<span class="code-line">...</span>\n`;
+          }
+          
+          setHighlightedCode(formattedHtml);
+        } else {
+          // 非动画模式，正常高亮全部代码
+          const highlighted = Prism.highlight(
+            editedCode || '',
+            Prism.languages[prismLanguage] || Prism.languages.plaintext,
+            prismLanguage
+          );
+          setHighlightedCode(highlighted);
+        }
       } catch (error) {
         console.error('语法高亮处理错误:', error);
         setHighlightedCode(editedCode || '');
       }
     }
-  }, [editedCode, language, isEditable]);
+  }, [editedCode, language, isEditable, animated, codeLines, linesDisplayed]);
 
   const handleEdit = () => {
     setIsEditable(true);
@@ -184,6 +259,7 @@ const CodeDisplay = ({ code, onCodeChange, editable = false, originalCode = null
         />
       ) : (
         <Box
+          ref={containerRef}
           component="pre"
           className={`language-${language}`}
           sx={{

@@ -44,12 +44,14 @@ const SelectTab = ({
   panelType, 
   activeModules,
   editedCodes = {},
-  onCodeChange
+  onCodeChange,
+  animatedTabs = []
 }) => {
   const [tabValue, setTabValue] = useState(-1); // 初始值为-1，表示没有选中任何选项卡
   const [visibleTabs, setVisibleTabs] = useState([]); // 记录哪些选项卡是可见的
   const [selectedFramework, setSelectedFramework] = useState('');
   const [selectedExistingAlgorithm, setSelectedExistingAlgorithm] = useState('');
+  const [activeAnimatedTabs, setActiveAnimatedTabs] = useState([]);
   // 保存原始代码的引用，用于重置
   const originalCodesRef = useRef({
     'device-cga': codeData['device-cga']['custom'],
@@ -79,6 +81,11 @@ const SelectTab = ({
     }
   };
 
+  // 同步外部传入的需要动画的选项卡
+  useEffect(() => {
+    setActiveAnimatedTabs(animatedTabs);
+  }, [animatedTabs]);
+
   // 获取选项卡索引
   const getTabIndex = (tab) => {
     const tabList = panelType === 'middle' ? tabsConfig.middle : tabsConfig.right;
@@ -102,6 +109,14 @@ const SelectTab = ({
 
   const handleChange = (event, newValue) => {
     setTabValue(newValue);
+    
+    // 当手动切换选项卡时，清除该选项卡的动画效果
+    const tabList = panelType === 'middle' ? tabsConfig.middle : tabsConfig.right;
+    const selectedTabId = tabList[visibleTabs[newValue]]?.id;
+    
+    if (selectedTabId && activeAnimatedTabs.includes(selectedTabId)) {
+      setActiveAnimatedTabs(prev => prev.filter(tab => tab !== selectedTabId));
+    }
   };
 
   const handleFrameworkChange = (event) => {
@@ -166,6 +181,11 @@ const SelectTab = ({
     } else if (codeType === 'host-code') {
       return codeData[codeType]['default'];
     } else if (['graph-ir', 'matrix-ir', 'hardware-instruction'].includes(codeType)) {
+      // 如果算法是'custom'(模版)，则显示对应的模版IR代码
+      if (algorithm === 'custom' && codeData[codeType]['custom']) {
+        return codeData[codeType]['custom'];
+      }
+      // 否则显示具体算法的IR代码，如果不存在则回退到BFS
       return codeData[codeType][algorithm] || codeData[codeType]['bfs'];
     }
     
@@ -233,6 +253,7 @@ const SelectTab = ({
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'device-cga')}
                 editable={selectedAlgorithm === 'custom'}
                 language="python"
+                animated={false}
               />
             </TabPanel>
           )}
@@ -245,6 +266,7 @@ const SelectTab = ({
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'host-code')}
                 editable={false}
                 language="cpp"
+                animated={false}
               />
             </TabPanel>
           )}
@@ -290,6 +312,7 @@ const SelectTab = ({
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'existing-framework')}
                 editable={false}
                 language="python"
+                animated={false}
               />
             </TabPanel>
           )}
@@ -302,6 +325,7 @@ const SelectTab = ({
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'graph-ir')}
                 editable={false}
                 language="mlir"
+                animated={activeAnimatedTabs.includes('graph-ir')}
               />
             </TabPanel>
           )}
@@ -314,6 +338,7 @@ const SelectTab = ({
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'matrix-ir')}
                 editable={false}
                 language="mlir"
+                animated={activeAnimatedTabs.includes('matrix-ir')}
               />
             </TabPanel>
           )}
@@ -326,6 +351,7 @@ const SelectTab = ({
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'hardware-instruction')}
                 editable={false}
                 language="hardware"
+                animated={activeAnimatedTabs.includes('hardware-instruction')}
               />
             </TabPanel>
           )}
