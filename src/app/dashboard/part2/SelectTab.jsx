@@ -64,7 +64,11 @@ const SelectTab = ({ activeTab, selectedAlgorithm, selectedDataset, panelType, a
       }
     } else if (panelType === 'middle') {
       // 中间面板保持默认的选项卡显示
-      setTabValue(0);
+      if (activeTab === 'device-cga') {
+        setTabValue(0);
+      } else if (activeTab === 'host-code') {
+        setTabValue(1);
+      }
     }
   }, [activeModules, activeTab, panelType]);
 

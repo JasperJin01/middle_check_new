@@ -1,11 +1,15 @@
 import { Box, IconButton, Tooltip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const CodeDisplay = ({ code, onCodeChange, editable = false }) => {
   const [isEditable, setIsEditable] = useState(false);
   const [editedCode, setEditedCode] = useState(code);
+
+  useEffect(() => {
+    setEditedCode(code);
+  }, [code]);
 
   const handleEdit = () => {
     setIsEditable(true);
@@ -23,7 +27,12 @@ const CodeDisplay = ({ code, onCodeChange, editable = false }) => {
   };
 
   return (
-    <Box sx={{ position: 'relative' }}>
+    <Box sx={{ 
+      position: 'relative', 
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
       {editable && (
         <Box
           sx={{
@@ -51,7 +60,7 @@ const CodeDisplay = ({ code, onCodeChange, editable = false }) => {
         </Box>
       )}
       <Box
-        component={isEditable ? 'textarea' : 'div'}
+        component={isEditable ? 'textarea' : 'pre'}
         value={isEditable ? editedCode : undefined}
         onChange={isEditable ? handleCodeChange : undefined}
         sx={{
@@ -61,11 +70,15 @@ const CodeDisplay = ({ code, onCodeChange, editable = false }) => {
           borderRadius: 1,
           fontFamily: 'monospace',
           fontSize: '0.8rem',
-          maxHeight: '400px',
+          flexGrow: 1,
+          width: '100%',
+          height: '100%',
           overflow: 'auto',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
           border: '1px solid #e0e0e0',
+          m: 0,
+          boxSizing: 'border-box',
           '&::-webkit-scrollbar': { width: '6px' },
           '&::-webkit-scrollbar-track': { background: '#f5f5f5' },
           '&::-webkit-scrollbar-thumb': { 
@@ -78,9 +91,9 @@ const CodeDisplay = ({ code, onCodeChange, editable = false }) => {
           '& strong': { fontWeight: 'bold' },
           '& em': { fontStyle: 'italic' },
           ...(isEditable && {
-            resize: 'vertical',
-            minHeight: '100px',
+            resize: 'none',
             outline: 'none',
+            display: 'block',
             '&:focus': {
               borderColor: 'primary.main',
               boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)',

@@ -10,8 +10,12 @@ import {
   InputLabel, 
   Select, 
   MenuItem,
-  Button
+  Button,
+  Fab,
+  Zoom
 } from '@mui/material';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 import SelectTab from './SelectTab';
 
@@ -24,6 +28,7 @@ const Page = () => {
   const [showMiddlePanel, setShowMiddlePanel] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [activeTab, setActiveTab] = useState('');
+  const [showBottomPanels, setShowBottomPanels] = useState(false);
 
   // 定义按钮坐标和尺寸
   const modules = {
@@ -68,14 +73,11 @@ const Page = () => {
 
     for (const [module, coords] of Object.entries(modules)) {
       if (x >= coords.x && x <= coords.x + coords.width && y >= coords.y && y <= coords.y + coords.height) {
-        // scrollToSection(module);
-        // runProcess(module);
         handleModuleClick(module);
         break;
       }
     }
   };
-
 
   const handleModuleClick = (module) => {
     switch (module) {
@@ -116,8 +118,6 @@ const Page = () => {
     }
   };
 
-  // const getLog = (module) => {
-    // return logDataMap[module];
   const handleAlgorithmChange = (event) => {
     setSelectedAlgorithm(event.target.value);
   };
@@ -126,170 +126,285 @@ const Page = () => {
     setSelectedDataset(event.target.value);
   };
 
+  const toggleBottomPanels = () => {
+    setShowBottomPanels(prev => !prev);
+  };
+
   return (
-    <Grid container spacing={1} sx={{ height: '100vh', p: 1 }}>
-      {/* 左侧流程展示 */}
-      <Grid item xs={4}>
-        <Paper
-          elevation={3}
-          sx={{
-            p: 2,
-            borderRadius: 3,
+    <Box sx={{ height: 'calc(100vh - 64px)', position: 'relative', overflow: 'hidden' }}>
+      <Grid container spacing={0} sx={{ height: '100%' }}>
+        {/* 左侧流程展示 - 固定不变 */}
+        <Grid item xs={4} sx={{ height: '100%', p: 1 }}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: 2,
+              borderRadius: 3,
+              height: '100%',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <Typography variant="h6" sx={{ 
+              fontWeight: 700, mb: 2, color: 'primary.main'
+            }}>
+              流程展示
+            </Typography>
+            <Box sx={{ textAlign: 'center', height: 'calc(100% - 80px)' }}>
+              <img
+                src="/page2_figure.jpg"
+                alt="Flowchart"
+                onClick={handleImageClick}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+                style={{ 
+                  cursor: 'pointer', 
+                  maxWidth: '100%', 
+                  height: 'auto',
+                  maxHeight: '80%'
+                }}
+              />
+              {hoveredModule && (
+                <Typography variant="h5" color="primary" sx={{ mt: 1 }}>
+                  {hoveredModule}
+                </Typography>
+              )}
+              <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                鼠标位置: ({mousePosition.x.toFixed(0)}, {mousePosition.y.toFixed(0)})
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* 右侧可滑动区域 */}
+        <Grid item xs={8} sx={{ height: '100%', position: 'relative', overflow: 'hidden', p: 1 }}>
+          {/* 主面板容器 */}
+          <Box sx={{ 
             height: '100%',
-            position: 'relative',
+            width: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            transform: showBottomPanels ? 'translateY(-100%)' : 'translateY(0)',
+            transition: 'transform 0.5s ease',
+            padding: 1,
+          }}>
+            <Grid container spacing={2} sx={{ height: '100%' }}>
+              {/* 中间面板 */}
+              <Grid item xs={6} sx={{ height: '100%' }}>
+                {showMiddlePanel ? (
+                  <Paper
+                    elevation={3}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      height: '100%',
+                    }}
+                  >
+                    {/* 图算法选择框 */}
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                      <InputLabel sx={{ fontSize: '1.3rem' }}>图算法选择</InputLabel>
+                      <Select
+                        value={selectedAlgorithm}
+                        label="图算法选择"
+                        onChange={handleAlgorithmChange}
+                        sx={{ fontSize: '1.1rem' }}
+                      >
+                        <MenuItem value="bfs">BFS</MenuItem>
+                        <MenuItem value="sssp">SSSP</MenuItem>
+                        <MenuItem value="wcc">WCC</MenuItem>
+                        <MenuItem value="kcore">K-Core</MenuItem>
+                        <MenuItem value="kclique">K-Clique</MenuItem>
+                        <MenuItem value="ppr">PPR</MenuItem>
+                        <MenuItem value="gcn">GCN</MenuItem>
+                        <MenuItem value="custom">模版</MenuItem>
+                        <MenuItem value="framework">框架转换生成</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    {/* 选项卡 */}
+                    <SelectTab 
+                      activeTab={activeTab} 
+                      selectedAlgorithm={selectedAlgorithm}
+                      panelType="middle"
+                      activeModules={activeModules}
+                    />
+                  </Paper>
+                ) : (
+                  <Paper
+                    elevation={3}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Typography variant="h6" color="text.secondary">
+                      点击左侧按钮激活面板
+                    </Typography>
+                  </Paper>
+                )}
+              </Grid>
+
+              {/* 右侧面板 */}
+              <Grid item xs={6} sx={{ height: '100%' }}>
+                {showRightPanel ? (
+                  <Paper
+                    elevation={3}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      height: '100%',
+                    }}
+                  >
+                    {/* 数据集选择框 */}
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                      <InputLabel sx={{ fontSize: '1.3rem' }}>数据集选择</InputLabel>
+                      <Select
+                        value={selectedDataset}
+                        label="数据集选择"
+                        onChange={handleDatasetChange}
+                        sx={{ fontSize: '1.1rem' }}
+                      >
+                        <MenuItem value="cora">Cora</MenuItem>
+                        <MenuItem value="citeseer">CiteSeer</MenuItem>
+                        <MenuItem value="pubmed">PubMed</MenuItem>
+                        <MenuItem value="ogbn-arxiv">OGBn-arxiv</MenuItem>
+                        <MenuItem value="ogbn-products">OGBn-products</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    {/* 选项卡 */}
+                    <SelectTab 
+                      activeTab={activeTab} 
+                      selectedAlgorithm={selectedAlgorithm}
+                      selectedDataset={selectedDataset}
+                      panelType="right"
+                      activeModules={activeModules}
+                    />
+                  </Paper>
+                ) : (
+                  <Paper
+                    elevation={3}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Typography variant="h6" color="text.secondary">
+                      点击左侧按钮激活面板
+                    </Typography>
+                  </Paper>
+                )}
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* 底部面板容器 */}
+          <Box sx={{ 
+            height: '100%',
+            width: '100%',
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            transform: showBottomPanels ? 'translateY(-100%)' : 'translateY(0)',
+            transition: 'transform 0.5s ease',
+            padding: 1,
+          }}>
+            <Grid container spacing={2} sx={{ height: '100%' }}>
+              {/* 日志输出区域 */}
+              <Grid item xs={6} sx={{ height: '100%' }}>
+                <Paper
+                  elevation={3}
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 700, mb: 2, color: 'primary.main'
+                  }}>
+                    日志输出
+                  </Typography>
+                  <Box sx={{ 
+                    flex: 1,
+                    overflow: 'auto',
+                    backgroundColor: '#f5f5f5',
+                    p: 2,
+                    borderRadius: 1,
+                    fontFamily: 'monospace',
+                    fontSize: '0.8rem',
+                  }}>
+                    {/* 这里放置日志内容 */}
+                    <pre>日志内容将在这里显示...</pre>
+                  </Box>
+                </Paper>
+              </Grid>
+
+              {/* 性能总结区域 */}
+              <Grid item xs={6} sx={{ height: '100%' }}>
+                <Paper
+                  elevation={3}
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 700, mb: 2, color: 'primary.main'
+                  }}>
+                    性能总结
+                  </Typography>
+                  <Box sx={{ 
+                    flex: 1,
+                    overflow: 'auto',
+                    backgroundColor: '#f5f5f5',
+                    p: 2,
+                    borderRadius: 1,
+                  }}>
+                    {/* 这里放置性能总结内容 */}
+                    <Typography variant="body1">
+                      性能总结将在这里显示...
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
+        </Grid>
+      </Grid>
+
+      {/* 滑动控制按钮 */}
+      <Zoom in={true}>
+        <Fab
+          color="primary"
+          size="medium"
+          onClick={toggleBottomPanels}
+          sx={{
+            position: 'absolute',
+            bottom: 16,
+            right: 16,
+            zIndex: 1000,
           }}
         >
-          <Typography variant="h6" sx={{ 
-            fontWeight: 700, mb: 2, color: 'primary.main'
-          }}>
-            流程展示
-          </Typography>
-
-          <Box sx={{ textAlign: 'center', height: 'calc(100% - 80px)' }}>
-            <img
-              src="/page2_figure.jpg"
-              alt="Flowchart"
-              onClick={handleImageClick}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-              style={{ 
-                cursor: 'pointer', 
-                maxWidth: '100%', 
-                height: 'auto',
-                maxHeight: '100%'
-              }}
-            />
-            {hoveredModule && (
-              <Typography variant="h5" color="primary" sx={{ mt: 1 }}>
-                {hoveredModule}
-              </Typography>
-            )}
-            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-              鼠标位置: ({mousePosition.x.toFixed(0)}, {mousePosition.y.toFixed(0)})
-            </Typography>
-          </Box>
-        </Paper>
-      </Grid>
-
-      {/* 中间面板 */}
-      <Grid item xs={4}>
-        {showMiddlePanel ? (
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              borderRadius: 3,
-              height: '100%',
-            }}
-          >
-
-
-            {/* 图算法选择框 */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel sx={{ fontSize: '1.3rem' }}>图算法选择</InputLabel>
-              <Select
-                value={selectedAlgorithm}
-                label="图算法选择111"
-                onChange={handleAlgorithmChange}
-                sx={{ fontSize: '1.1rem' }}
-              >
-                <MenuItem value="bfs">BFS</MenuItem>
-                <MenuItem value="sssp">SSSP</MenuItem>
-                <MenuItem value="wcc">WCC</MenuItem>
-                <MenuItem value="kcore">K-Core</MenuItem>
-                <MenuItem value="kclique">K-Clique</MenuItem>
-                <MenuItem value="ppr">PPR</MenuItem>
-                <MenuItem value="gcn">GCN</MenuItem>
-                <MenuItem value="custom">模版</MenuItem>
-                <MenuItem value="framework">框架转换生成</MenuItem>
-              </Select>
-            </FormControl>
-
-            {/* 选项卡 */}
-            <SelectTab 
-              activeTab={activeTab} 
-              selectedAlgorithm={selectedAlgorithm}
-              panelType="middle"
-              activeModules={activeModules}
-            />
-          </Paper>
-        ) : (
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              borderRadius: 3,
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Typography variant="h6" color="text.secondary">
-              点击左侧按钮激活面板
-            </Typography>
-          </Paper>
-        )}
-      </Grid>
-
-      {/* 右侧面板 */}
-      <Grid item xs={4}>
-        {showRightPanel ? (
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              borderRadius: 3,
-              height: '100%',
-            }}
-          >
-
-
-            {/* 数据集选择框 */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel sx={{ fontSize: '1.3rem' }}>数据集选择</InputLabel>
-              <Select
-                value={selectedDataset}
-                label="数据集选择111"
-                onChange={handleDatasetChange}
-                sx={{ fontSize: '1.1rem' }}
-              >
-                <MenuItem value="cora">Cora</MenuItem>
-                <MenuItem value="citeseer">CiteSeer</MenuItem>
-                <MenuItem value="pubmed">PubMed</MenuItem>
-                <MenuItem value="ogbn-arxiv">OGBn-arxiv</MenuItem>
-                <MenuItem value="ogbn-products">OGBn-products</MenuItem>
-              </Select>
-            </FormControl>
-
-            {/* 选项卡 */}
-            <SelectTab 
-              activeTab={activeTab} 
-              selectedAlgorithm={selectedAlgorithm}
-              selectedDataset={selectedDataset}
-              panelType="right"
-              activeModules={activeModules}
-            />
-          </Paper>
-        ) : (
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              borderRadius: 3,
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Typography variant="h6" color="text.secondary">
-              点击左侧按钮激活面板
-            </Typography>
-          </Paper>
-        )}
-      </Grid>
-    </Grid>
+          {showBottomPanels ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+        </Fab>
+      </Zoom>
+    </Box>
   );
 };
 
