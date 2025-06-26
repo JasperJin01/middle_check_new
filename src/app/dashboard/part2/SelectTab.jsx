@@ -42,10 +42,13 @@ const SelectTab = ({
   selectedAlgorithm, 
   selectedDataset, 
   panelType, 
-  activeModules,
   editedCodes = {},
   onCodeChange,
-  animatedTabs = []
+  animatedTabs = [],
+  frameworkSelection = { framework: '', algorithm: '' },
+  setFrameworkSelection = () => {},
+  visibleIRTabs = [],
+  cgaAnimationEnabled = false
 }) => {
   const [tabValue, setTabValue] = useState(-1); // 初始值为-1，表示没有选中任何选项卡
   const [visibleTabs, setVisibleTabs] = useState([]); // 记录哪些选项卡是可见的
@@ -86,13 +89,27 @@ const SelectTab = ({
     setActiveAnimatedTabs(animatedTabs);
   }, [animatedTabs]);
 
+  // 同步本地状态和props中的框架选择
+  useEffect(() => {
+    setSelectedFramework(frameworkSelection.framework);
+    setSelectedExistingAlgorithm(frameworkSelection.algorithm);
+  }, [frameworkSelection]);
+  
+  // 当本地状态变化时，更新props中的框架选择
+  useEffect(() => {
+    setFrameworkSelection({
+      framework: selectedFramework,
+      algorithm: selectedExistingAlgorithm
+    });
+  }, [selectedFramework, selectedExistingAlgorithm, setFrameworkSelection]);
+
   // 获取选项卡索引
   const getTabIndex = (tab) => {
     const tabList = panelType === 'middle' ? tabsConfig.middle : tabsConfig.right;
     return tabList.findIndex(item => item.id === tab);
   };
 
-  // 根据activeModules和activeTab决定显示哪个选项卡
+  // 根据activeTab决定显示哪个选项卡
   useEffect(() => {
     if (!activeTab) return;
     
@@ -106,6 +123,9 @@ const SelectTab = ({
       setTabValue(visibleTabs.indexOf(tabIndex) !== -1 ? visibleTabs.indexOf(tabIndex) : visibleTabs.length);
     }
   }, [activeTab, panelType, visibleTabs]);
+
+
+
 
   const handleChange = (event, newValue) => {
     setTabValue(newValue);
@@ -203,17 +223,61 @@ const SelectTab = ({
     
     // 根据visibleTabs筛选出要显示的标签
     const visibleTabItems = visibleTabs
-      .map(index => tabList[index])
+      .map(index => {
+        const tab = tabList[index];
+        // 如果是IR相关选项卡，检查是否在visibleIRTabs中
+        if (tab && ['graph-ir', 'matrix-ir', 'hardware-instruction'].includes(tab.id)) {
+          return visibleIRTabs.includes(tab.id) ? tab : null;
+        }
+        return tab;
+      })
       .filter(Boolean);
       
     if (visibleTabItems.length === 0) {
       return null;
     }
-    
+    const primaryPurple = '#625BF6';
     return (
-      <Tabs value={tabValue} onChange={handleChange}>
+      <Tabs 
+        value={tabValue} 
+        onChange={handleChange}
+        sx={{
+          mb: 1.5,
+          margin: '0',
+          minHeight: '44px', // 这个和tab的minHeight共同调整按钮高度
+          '& .MuiTabs-flexContainer': {
+            borderBottom: `2px solid ${primaryPurple}60`
+          },
+          // 不添加就会导致tab间距很大（默认是24px我也不知道为什么）
+          '& .MuiButtonBase-root.MuiTab-root+.MuiButtonBase-root.MuiTab-root': {
+            marginLeft: '4px'
+          },
+          '& .MuiTab-root': {
+            fontSize: '0.9rem',
+            padding: '6px 20px',
+            transition: 'all 0.3s',
+            borderRadius: '6px 6px 0 0',
+            '&:not(.Mui-selected):hover': {
+              backgroundColor: `${primaryPurple}20`,
+              color: primaryPurple
+            }
+          },
+          '& .Mui-selected': {
+            backgroundColor: primaryPurple,
+            color: 'white !important'
+          },
+          '& .MuiTabs-indicator': {
+            height: 2,
+            backgroundColor: primaryPurple
+          }
+        }}
+      >
         {visibleTabItems.map((tab, index) => (
-          <Tab key={tab.id} label={tab.label} />
+          <Tab 
+            key={tab.id} 
+            label={tab.label}
+            sx={{ margin: 0, minHeight: '44px' }}
+          />
         ))}
       </Tabs>
     );
@@ -223,13 +287,7 @@ const SelectTab = ({
   const renderContent = () => {
     if (tabValue === -1 || visibleTabs.length === 0) {
       return (
-        <Box sx={{ 
-          width: '100%', 
-          height: '100%', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center'
-        }}>
+        <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
           <Typography variant="body1" color="text.secondary">
             请从左侧流程图选择需要查看的内容
           </Typography>
@@ -253,7 +311,7 @@ const SelectTab = ({
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'device-cga')}
                 editable={selectedAlgorithm === 'custom'}
                 language="python"
-                animated={false}
+                animated={cgaAnimationEnabled}
               />
             </TabPanel>
           )}
@@ -307,6 +365,8 @@ const SelectTab = ({
                 </FormControl>
               </Box>
 
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}></Box>
+
               <CodeDisplay 
                 code={editedCodes['existing-framework'] || getFrameworkCode()} 
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'existing-framework')}
@@ -317,7 +377,8 @@ const SelectTab = ({
             </TabPanel>
           )}
           
-          {currentTabId === 'graph-ir' && (
+          {/* 只有当选项卡ID在visibleIRTabs中时才渲染内容 */}
+          {currentTabId === 'graph-ir' && visibleIRTabs.includes('graph-ir') && (
             <TabPanel value={tabValue} index={tabValue}>
               <CodeDisplay 
                 code={getCodeContent('graph-ir')} 
@@ -330,7 +391,7 @@ const SelectTab = ({
             </TabPanel>
           )}
           
-          {currentTabId === 'matrix-ir' && (
+          {currentTabId === 'matrix-ir' && visibleIRTabs.includes('matrix-ir') && (
             <TabPanel value={tabValue} index={tabValue}>
               <CodeDisplay 
                 code={getCodeContent('matrix-ir')} 
@@ -343,7 +404,7 @@ const SelectTab = ({
             </TabPanel>
           )}
           
-          {currentTabId === 'hardware-instruction' && (
+          {currentTabId === 'hardware-instruction' && visibleIRTabs.includes('hardware-instruction') && (
             <TabPanel value={tabValue} index={tabValue}>
               <CodeDisplay 
                 code={getCodeContent('hardware-instruction')} 

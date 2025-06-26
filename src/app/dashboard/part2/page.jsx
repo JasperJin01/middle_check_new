@@ -12,17 +12,88 @@ import {
   MenuItem,
   Button,
   Fab,
-  Zoom
+  Zoom,
+  Tabs,
+  Tab
 } from '@mui/material';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { BarChart, Bar, XAxis, YAxis, Legend } from 'recharts';
 
 import SelectTab from './SelectTab';
+import { codeData } from './codeData';
+import FlowDiagram from './FlowDiagram';
+
+// 示例代码，在网络请求失败时使用
+const sampleCodes = {
+  'bfs': { 
+    frameworkCode: '# Sample BFS framework code', 
+    cgaCode: '# Sample BFS CGA code' 
+  },
+  'sssp': { 
+    frameworkCode: '# Sample SSSP framework code', 
+    cgaCode: '# Sample SSSP CGA code' 
+  },
+  'wcc': { 
+    frameworkCode: '# Sample WCC framework code', 
+    cgaCode: '# Sample WCC CGA code' 
+  },
+  'kcore': { 
+    frameworkCode: '# Sample K-Core framework code', 
+    cgaCode: '# Sample K-Core CGA code' 
+  },
+  'kclique': { 
+    frameworkCode: '# Sample K-Clique framework code', 
+    cgaCode: '# Sample K-Clique CGA code' 
+  },
+  'ppr': { 
+    frameworkCode: '# Sample PPR framework code', 
+    cgaCode: '# Sample PPR CGA code' 
+  },
+  'gcn': { 
+    frameworkCode: '# Sample GCN framework code', 
+    cgaCode: '# Sample GCN CGA code' 
+  }
+};
+
+// 导入请求工具
+const request = {
+  BASE_URL: 'http://127.0.0.1:8000' // 这里需要替换为实际的后端URL
+};
+
+// 算法和数据集映射
+const algorithmMappings = {
+  'bfs': {
+    url: 'bfs',
+    datasets: ['smallgraph', 'facebook', 'physics'],
+  },
+  'sssp': {
+    url: 'sssp',
+    datasets: ['smallgraph', 'facebook', 'physics'],
+  },
+  'wcc': {
+    url: 'wcc',
+    datasets: ['euroroad', 'pdzbase', 'facebook'],
+  },
+  'kcore': {
+    url: 'kcore',
+    datasets: ['physics', 'facebook'],
+  },
+  'kclique': {
+    url: 'cf',
+    datasets: ['euroroad', 'physics'],
+  },
+  'ppr': {
+    url: 'ppr',
+    datasets: ['smallgraph', 'physics', 'facebook'],
+  },
+  'gcn': {
+    url: 'gcn',
+    datasets: ['cora'],
+  }
+};
 
 const Page = () => {
-  const [hoveredModule, setHoveredModule] = useState(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [activeModules, setActiveModules] = useState([]);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('custom');
   const [selectedDataset, setSelectedDataset] = useState('');
   const [showMiddlePanel, setShowMiddlePanel] = useState(false);
@@ -31,180 +102,44 @@ const Page = () => {
   const [showBottomPanels, setShowBottomPanels] = useState(false);
   const [editedCodes, setEditedCodes] = useState({});
   const [animatedTabs, setAnimatedTabs] = useState([]);
-  const imageRef = useRef(null);
-  const [scaleFactor, setScaleFactor] = useState({ scaleX: 1, scaleY: 1 });
+  const [visibleIRTabs, setVisibleIRTabs] = useState([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [results, setResults] = useState({ terminalOutput: '' });
+  const resultsBoxRef = useRef(null);
+  const [chartData, setChartData] = useState([]);
+  const [chartMetric, setChartMetric] = useState('performance');
+  const [originalCodeDisplay, setOriginalCodeDisplay] = useState('');
+  const [transformedCode, setTransformedCode] = useState('');
+  const simulatorBoxRef = useRef(null);
+  const [simulatorResults, setSimulatorResults] = useState('');
+  const [selectedFramework, setSelectedFramework] = useState('');
+  const [cgaAnimationEnabled, setCgaAnimationEnabled] = useState(false);
   
-  // 原始图片尺寸（根据实际图片尺寸设置）
-  const originalImageDimensions = { width: 480, height: 540 };
+  // 添加保存框架选择和算法选择的状态
+  const [frameworkSelection, setFrameworkSelection] = useState({
+    framework: '',
+    algorithm: ''
+  });
 
-  // 定义按钮坐标和尺寸 - 基于原始图片尺寸
-  const modules = {
-    '统一编程框架CGA': { x: 73, y: 92, width: 84, height: 39.6 },
-    '编译器前端': { x: 84, y: 158, width: 205.2, height: 28.8 },
-    '图-矩阵转换及编译优化': { x: 211, y: 203, width: 72, height: 75.6 },
-    '编译器后端': { x: 83, y: 287, width: 99.6, height: 28.8 },
-    '主机端代码': { x: 348, y: 93, width: 126, height: 36 },
-    // 'g++': { x: 353, y: 212, width: 114, height: 36 },
-    // 'Linker': { x: 277, y: 387, width: 66, height: 28.8 },
-    '转换': { x: 182, y: 94, width: 42, height: 39.6 },
-    '现有图计算框架': { x: 249, y: 91, width: 74.4, height: 39.6 },
-    'exe执行': { x: 375, y: 431, width: 64.8, height: 28.8 }
-  };
-
-  // 计算当前缩放比例
-  const calculateScaleFactor = () => {
-    if (!imageRef.current) return { scaleX: 1, scaleY: 1 };
-    
-    const displayWidth = imageRef.current.clientWidth;
-    const displayHeight = imageRef.current.clientHeight;
-    
-    return {
-      scaleX: displayWidth / originalImageDimensions.width,
-      scaleY: displayHeight / originalImageDimensions.height
-    };
-  };
-
-  // 监听窗口大小变化，重新计算缩放因子
+  // 监听框架选择变化，更新selectedFramework
   useEffect(() => {
-    const updateScaleFactor = () => {
-      const newScaleFactor = calculateScaleFactor();
-      setScaleFactor(newScaleFactor);
-    };
-
-    // 初始计算
-    updateScaleFactor();
-
-    // 监听窗口大小变化
-    window.addEventListener('resize', updateScaleFactor);
-    
-    // 清理函数
-    return () => {
-      window.removeEventListener('resize', updateScaleFactor);
-    };
-  }, []);
-
-  // 图片加载完成后计算缩放因子
-  const handleImageLoad = () => {
-    const newScaleFactor = calculateScaleFactor();
-    setScaleFactor(newScaleFactor);
-  };
-  
-  // 根据缩放比例调整坐标
-  const getScaledCoordinates = (coords) => {
-    return {
-      x: coords.x * scaleFactor.scaleX,
-      y: coords.y * scaleFactor.scaleY,
-      width: coords.width * scaleFactor.scaleX,
-      height: coords.height * scaleFactor.scaleY
-    };
-  };
-  
-  const handleMouseMove = (event) => {
-    const rect = event.target.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    
-    // 计算对应的原始坐标（反向计算）
-    const originalX = x / scaleFactor.scaleX;
-    const originalY = y / scaleFactor.scaleY;
-    
-    setMousePosition({ 
-      x, 
-      y,
-      originalX,
-      originalY
-    });
-    
-    let foundModule = null;
-    for (const [module, coords] of Object.entries(modules)) {
-      const scaledCoords = getScaledCoordinates(coords);
-      
-      if (
-        x >= scaledCoords.x && 
-        x <= scaledCoords.x + scaledCoords.width && 
-        y >= scaledCoords.y && 
-        y <= scaledCoords.y + scaledCoords.height
-      ) {
-        foundModule = module;
-        break;
-      }
-    }
-    setHoveredModule(foundModule);
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredModule(null);
-    setMousePosition({ x: 0, y: 0 });
-  };
-
-  const handleImageClick = (event) => {
-    const rect = event.target.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    
-    for (const [module, coords] of Object.entries(modules)) {
-      const scaledCoords = getScaledCoordinates(coords);
-      
-      if (
-        x >= scaledCoords.x && 
-        x <= scaledCoords.x + scaledCoords.width && 
-        y >= scaledCoords.y && 
-        y <= scaledCoords.y + scaledCoords.height
-      ) {
-        handleModuleClick(module);
-        break;
-      }
-    }
-  };
-
-  const handleModuleClick = (module) => {
-    switch (module) {
-      case '统一编程框架CGA':
-        setShowMiddlePanel(true);
-        setShowRightPanel(false);
-        setActiveTab('device-cga');
-        setActiveModules(prev => [...new Set([...prev, module])]);
-        break;
-      case '现有图计算框架':
-        setShowMiddlePanel(true);
-        setShowRightPanel(true);
-        setActiveTab('existing-framework');
-        setActiveModules(prev => [...new Set([...prev, module])]);
-        break;
-      case '编译器前端':
-        setShowRightPanel(true);
-        setActiveTab('graph-ir');
-        setAnimatedTabs(prev => [...new Set([...prev, 'graph-ir'])]);
-        setActiveModules(prev => [...new Set([...prev, module])]);
-        break;
-      case '图-矩阵转换及编译优化':
-        setShowRightPanel(true);
-        setActiveTab('matrix-ir');
-        setAnimatedTabs(prev => [...new Set([...prev, 'matrix-ir'])]);
-        setActiveModules(prev => [...new Set([...prev, module])]);
-        break;
-      case '编译器后端':
-        setShowRightPanel(true);
-        setActiveTab('hardware-instruction');
-        setAnimatedTabs(prev => [...new Set([...prev, 'hardware-instruction'])]);
-        setActiveModules(prev => [...new Set([...prev, module])]);
-        break;
-      case '主机端代码':
-        setShowMiddlePanel(true);
-        setActiveTab('host-code');
-        setActiveModules(prev => [...new Set([...prev, module])]);
-        break;
-      default:
-        break;
-    }
-  };
+    setSelectedFramework(frameworkSelection.framework);
+  }, [frameworkSelection]);
 
   const handleAlgorithmChange = (event) => {
     const newAlgorithm = event.target.value;
     setSelectedAlgorithm(newAlgorithm);
     
-    // 新的逻辑：不需要清除已编辑的代码
-    // 这样切换回模板时，可以保持之前编辑过的内容
+    // 切换算法时清除IR选项卡
+    setVisibleIRTabs([]);
+    
+    // 更新可用的数据集
+    if(newAlgorithm !== 'custom' && newAlgorithm !== 'framework' && algorithmMappings[newAlgorithm]) {
+      // 如果当前选择的数据集不在新算法的可用数据集列表中，清空选择
+      if(selectedDataset && !algorithmMappings[newAlgorithm].datasets.includes(selectedDataset)) {
+        setSelectedDataset('');
+      }
+    }
   };
 
   const handleDatasetChange = (event) => {
@@ -224,60 +159,279 @@ const Page = () => {
     }));
   };
 
+  // 获取指定算法可用的数据集列表
+  const getAvailableDatasets = () => {
+    if(selectedAlgorithm && selectedAlgorithm !== 'custom' && selectedAlgorithm !== 'framework') {
+      return algorithmMappings[selectedAlgorithm]?.datasets || [];
+    }
+    return [];
+  };
+  
+  // 获取算法URL
+  const getAlgorithmUrl = (algo) => {
+    return algorithmMappings[algo]?.url || algo;
+  };
+  
+  // 获取数据集URL
+  const getDatasetUrl = (dataset) => {
+    return dataset;
+  };
+
+  const handleRun = async () => {
+    if (isRunning || !selectedAlgorithm) {
+      return;
+    }
+
+    setIsRunning(true);
+    setResults({ terminalOutput: 'Connecting to server...\n' });
+
+    try {
+      const eventSource = new EventSource(`${request.BASE_URL}/part3/moni2/${selectedAlgorithm}/${selectedDataset}/`);
+      let terminalOutput = '';
+
+      eventSource.onmessage = async (event) => {
+        if (event.data === '[done]') {
+          eventSource.close();
+          setResults(prev => ({
+            ...prev,
+            terminalOutput: prev.terminalOutput + 'Copying results...\n'
+          }));
+
+          try {
+            const res = await fetch(`${request.BASE_URL}/part3/result/2/${selectedAlgorithm}/`);
+            const jsonData = await res.json();
+
+            setResults(prev => ({
+              ...prev,
+              terminalOutput: prev.terminalOutput + 'Completed\n'
+            }));
+
+            const originalCode = selectedFramework === 'GraphScope' ? jsonData.data.pregel : jsonData.data.dgl;
+            setOriginalCodeDisplay(originalCode ? originalCode.join('\n') : sampleCodes[selectedAlgorithm].frameworkCode);
+
+            setTransformedCode(jsonData.data.CGA ? jsonData.data.CGA.join('\n') : sampleCodes[selectedAlgorithm].cgaCode);
+
+            setResults(prev => ({
+              ...prev,
+              graphIR: jsonData.data.GraphIR ? jsonData.data.GraphIR.join('\n') : '',
+              matrixIR: jsonData.data.MatrixIR ? jsonData.data.MatrixIR.join('\n') : '',
+              hardwareInstructions: jsonData.data.asm ? jsonData.data.asm.join('\n') : ''
+            }));
+            
+            // 生成图表数据用于显示
+            generateChartData();
+          } catch (error) {
+            setResults(prev => ({
+              ...prev,
+              terminalOutput: prev.terminalOutput + `Failed to get results: ${error.message}\n`
+            }));
+          } finally {
+            setIsRunning(false);
+          }
+
+        } else if (event.data === '[error]') {
+          eventSource.close();
+          setResults(prev => ({
+            ...prev,
+            terminalOutput: prev.terminalOutput + '\nExecution error\n'
+          }));
+          setIsRunning(false);
+        } else {
+          setResults(prev => ({
+            ...prev,
+            terminalOutput: prev.terminalOutput + event.data + '\n'
+          }));
+        }
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        setResults(prev => ({
+          ...prev,
+          terminalOutput: prev.terminalOutput + '\nConnection error\n'
+        }));
+        setIsRunning(false);
+      };
+
+    } catch (error) {
+      setResults({
+        terminalOutput: `Execution failed: ${error.message}`
+      });
+      setIsRunning(false);
+    }
+  };
+  
+  // 自动滚动到底部
+  const scrollToBottom = () => {
+    if (resultsBoxRef.current) {
+      resultsBoxRef.current.scrollTop = resultsBoxRef.current.scrollHeight;
+    }
+  };
+  
+  // 监听结果变化，自动滚动
+  useEffect(() => {
+    scrollToBottom();
+  }, [results]);
+  
+  // 定义Y轴映射
+  const yAxisMap = {
+    'bfs': { 
+      performance: 'GTSPS',
+      consumption: 'GTSPS/W'
+    },
+    'sssp': { 
+      performance: 'GTSPS',
+      consumption: 'GTSPS/W'
+    },
+    'wcc': { 
+      performance: 'GTSPS',
+      consumption: 'GTSPS/W'
+    },
+    'kcore': { 
+      performance: 'GTSPS',
+      consumption: 'GTSPS/W'
+    },
+    'kclique': { 
+      performance: 'GTSPS',
+      consumption: 'GTSPS/W'
+    },
+    'ppr': { 
+      performance: 'GTSPS',
+      consumption: 'GTSPS/W'
+    },
+    'gcn': { 
+      performance: 'GTSPS',
+      consumption: 'GTSPS/W'
+    },
+  };
+  
+  // 获取当前算法的Y轴单位
+  const getYAxisUnit = (metric) => {
+    if (selectedAlgorithm && yAxisMap[selectedAlgorithm]) {
+      return yAxisMap[selectedAlgorithm][metric] || '';
+    }
+    return '';
+  };
+
+  // 生成示例图表数据
+  const generateChartData = () => {
+    if (!selectedAlgorithm || selectedAlgorithm === 'custom' || selectedAlgorithm === 'framework' || !selectedDataset) {
+      return;
+    }
+    
+    // 只生成当前选择的数据集的数据
+    const chartData = [{
+      name: '当前值',
+      performance: Math.random() * 5 + 1, // 随机生成1-6之间的性能值
+      ptarget: 3.5, // 固定的中期指标值
+      consumption: Math.random() * 10 + 5, // 随机生成5-15之间的性能功耗比
+      ctarget: 8.0 // 固定的性能功耗比中期指标值
+    }];
+    
+    setChartData(chartData);
+  };
+
+  // 处理流程图中模块的点击事件
+  const handleModuleClick = (module) => {
+    switch (module) {
+      case '统一编程框架CGA':
+        setShowMiddlePanel(true);
+        setShowRightPanel(false);
+        setActiveTab('device-cga');
+        setCgaAnimationEnabled(false);
+        
+        // 重置现有图计算框架的选择，避免闪动bug
+        setFrameworkSelection({
+          framework: '',
+          algorithm: ''
+        });
+        break;
+      case '现有图计算框架':
+        setShowMiddlePanel(true);
+        setShowRightPanel(true);
+        setActiveTab('existing-framework');
+        if (!frameworkSelection.framework) {
+          setSelectedAlgorithm('framework');
+        }
+        break;
+      case '转换':
+        console.log(frameworkSelection);
+        // 检查是否有选择框架和算法
+        if (frameworkSelection.framework && frameworkSelection.algorithm) {
+          // 获取对应算法的CGA代码
+          const algorithmName = frameworkSelection.algorithm;
+          const cgaCode = codeData['device-cga'][algorithmName];
+          console.log(cgaCode);
+          
+          if (cgaCode) {
+            // 添加注释说明代码来源
+            const convertedCode = `# 从${frameworkSelection.framework}框架转换生成的${algorithmName.toUpperCase()}算法代码\n\n${cgaCode}`;
+            
+            console.log();
+            // 更新设备端CGA代码
+            setEditedCodes(prev => ({
+              ...prev,
+              'device-cga': convertedCode
+            }));
+            
+            // 激活设备端CGA代码选项卡
+            setShowMiddlePanel(true);
+            setActiveTab('device-cga');
+            // 图算法选择框保持为"框架转换生成"但内部代码显示对应算法的代码
+            setSelectedAlgorithm(algorithmName);
+            
+            // 启用CGA代码的动画效果
+            setCgaAnimationEnabled(true);
+          }
+        }
+        break;
+      case '编译器前端':
+        setShowRightPanel(true);
+        setActiveTab('graph-ir');
+        setAnimatedTabs(prev => [...new Set([...prev, 'graph-ir'])]);
+        // 添加到可见IR选项卡
+        setVisibleIRTabs(prev => [...new Set([...prev, 'graph-ir'])]);
+        break;
+      case '图-矩阵转换及编译优化':
+        setShowRightPanel(true);
+        setActiveTab('matrix-ir');
+        setAnimatedTabs(prev => [...new Set([...prev, 'matrix-ir'])]);
+        // 添加到可见IR选项卡
+        setVisibleIRTabs(prev => [...new Set([...prev, 'matrix-ir'])]);
+        break;
+      case '编译器后端':
+        setShowRightPanel(true);
+        setActiveTab('hardware-instruction');
+        setAnimatedTabs(prev => [...new Set([...prev, 'hardware-instruction'])]);
+        // 添加到可见IR选项卡
+        setVisibleIRTabs(prev => [...new Set([...prev, 'hardware-instruction'])]);
+        break;
+      case '主机端代码':
+        setShowMiddlePanel(true);
+        setActiveTab('host-code');
+        break;
+      case 'exe执行':
+        // 显示底部面板
+        setShowBottomPanels(true);
+        // 执行程序
+        handleRun();
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <Box sx={{ height: 'calc(100vh - 64px)', position: 'relative', overflow: 'hidden' }}>
       <Grid container spacing={0} sx={{ height: '100%' }}>
-        {/* 左侧流程展示 - 固定不变 */}
+        {/* 左侧流程展示 - 使用FlowDiagram组件 */}
         <Grid item xs={4} sx={{ height: '100%', p: 1 }}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              borderRadius: 3,
-              height: '100%',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <Typography variant="h6" sx={{ 
-              fontWeight: 700, mb: 2, color: 'primary.main'
-            }}>
-              流程展示
-            </Typography>
-            <Box sx={{ textAlign: 'center', height: '100%', overflow: 'hidden' }}>
-              <img
-                ref={imageRef}
-                src="/page2_figure.jpg"
-                alt="流程图"
-                onClick={handleImageClick}
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-                onLoad={handleImageLoad}
-                style={{ 
-                  cursor: 'pointer', 
-                  maxWidth: '100%', 
-                  height: 'auto',
-                  maxHeight: '80%'
-                }}
-              />
-              {hoveredModule && (
-                <Typography variant="h5" color="primary" sx={{ mt: 1 }}>
-                  {hoveredModule}
-                </Typography>
-              )}
-              <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                鼠标位置: ({mousePosition.x.toFixed(0)}, {mousePosition.y.toFixed(0)}) 
-                缩放: ({scaleFactor.scaleX.toFixed(2)}, {scaleFactor.scaleY.toFixed(2)}) 
-                原始坐标: ({mousePosition.originalX?.toFixed(1) || 0}, {mousePosition.originalY?.toFixed(1) || 0})
-              </Typography>
-            </Box>
-          </Paper>
+          <FlowDiagram onModuleClick={handleModuleClick} />
         </Grid>
 
-        {/* 右侧可滑动区域 */}
+        {/* 中间和右侧可滑动区域 */}
         <Grid item xs={8} sx={{ height: '100%', position: 'relative', overflow: 'hidden', p: 1 }}>
-          {/* 主面板容器 */}
+          {/* 顶部面板容器 */}
           <Box sx={{ 
             height: '100%',
             width: '100%',
@@ -326,24 +480,17 @@ const Page = () => {
                       activeTab={activeTab} 
                       selectedAlgorithm={selectedAlgorithm}
                       panelType="middle"
-                      activeModules={activeModules}
                       editedCodes={editedCodes}
                       onCodeChange={handleCodeChange}
                       animatedTabs={animatedTabs}
+                      frameworkSelection={frameworkSelection}
+                      setFrameworkSelection={setFrameworkSelection}
+                      cgaAnimationEnabled={cgaAnimationEnabled}
                     />
                   </Paper>
                 ) : (
-                  <Paper
-                    elevation={3}
-                    sx={{
-                      p: 2,
-                      borderRadius: 3,
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
+                  <Paper elevation={3}
+                    sx={{ p: 2, borderRadius: 3, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',}}>
                     <Typography variant="h6" color="text.secondary">
                       点击左侧按钮激活面板
                     </Typography>
@@ -371,11 +518,9 @@ const Page = () => {
                         onChange={handleDatasetChange}
                         sx={{ fontSize: '1.1rem' }}
                       >
-                        <MenuItem value="cora">Cora</MenuItem>
-                        <MenuItem value="citeseer">CiteSeer</MenuItem>
-                        <MenuItem value="pubmed">PubMed</MenuItem>
-                        <MenuItem value="ogbn-arxiv">OGBn-arxiv</MenuItem>
-                        <MenuItem value="ogbn-products">OGBn-products</MenuItem>
+                        {getAvailableDatasets().map(dataset => (
+                          <MenuItem key={dataset} value={dataset}>{dataset}</MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
 
@@ -385,10 +530,12 @@ const Page = () => {
                       selectedAlgorithm={selectedAlgorithm}
                       selectedDataset={selectedDataset}
                       panelType="right"
-                      activeModules={activeModules}
                       editedCodes={editedCodes}
                       onCodeChange={handleCodeChange}
                       animatedTabs={animatedTabs}
+                      frameworkSelection={frameworkSelection}
+                      setFrameworkSelection={setFrameworkSelection}
+                      visibleIRTabs={visibleIRTabs}
                     />
                   </Paper>
                 ) : (
@@ -444,14 +591,16 @@ const Page = () => {
                   <Box sx={{ 
                     flex: 1,
                     overflow: 'auto',
-                    backgroundColor: '#f5f5f5',
+                    backgroundColor: '#000',
+                    color: '#fff',
                     p: 2,
                     borderRadius: 1,
                     fontFamily: 'monospace',
                     fontSize: '0.8rem',
-                  }}>
+                  }} 
+                  ref={resultsBoxRef}>
                     {/* 这里放置日志内容 */}
-                    <pre>日志内容将在这里显示...</pre>
+                    <pre>{results.terminalOutput || '日志内容将在这里显示...'}</pre>
                   </Box>
                 </Paper>
               </Grid>
@@ -476,14 +625,128 @@ const Page = () => {
                   <Box sx={{ 
                     flex: 1,
                     overflow: 'auto',
-                    backgroundColor: '#f5f5f5',
                     p: 2,
                     borderRadius: 1,
                   }}>
-                    {/* 这里放置性能总结内容 */}
-                    <Typography variant="body1">
-                      性能总结将在这里显示...
-                    </Typography>
+                    {/* 性能图表 */}
+                    {chartData.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
+                        <Tabs
+                          value={chartMetric}
+                          onChange={(e, v) => setChartMetric(v)}
+                          sx={{ mb: 3, alignSelf: 'flex-start' }}
+                        >
+                          <Tab label="性能" value="performance" style={{ fontWeight: 'bold', color: 'black' }} />
+                          <Tab label="性能功耗比" value="consumption" style={{ fontWeight: 'bold', color: 'black' }} />
+                        </Tabs>
+                        {chartMetric === 'performance' && (
+                          <BarChart
+                            data={chartData}
+                            margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
+                            width={550}
+                            height={350}
+                          >
+                            <text
+                              x="50%"
+                              y={20}
+                              textAnchor="middle"
+                              style={{ fontSize: '16px', fontWeight: 'bold' }}
+                            >
+                              {`${selectedAlgorithm.toUpperCase()} 在 ${selectedDataset} 数据集上的性能测试结果`}
+                            </text>
+                            <YAxis
+                              label={{
+                                value: `性能值(${getYAxisUnit('performance')})`,
+                                angle: -90,
+                                position: 'insideLeft'
+                              }}
+                            />
+                            <XAxis stroke="#000000" />
+                            <Legend
+                              verticalAlign="bottom"
+                              height={36}
+                              wrapperStyle={{ fontSize: '14px', paddingTop: '10px' }}
+                            />
+                            <Bar
+                              dataKey="performance"
+                              fill="#1976d2"
+                              radius={[4, 4, 0, 0]}
+                              barSize={40}
+                              name={'性能值'}
+                              label={{
+                                position: 'top',
+                                formatter: (value) => value.toFixed(4)
+                              }}
+                            />
+                            <Bar
+                              dataKey="ptarget"
+                              fill="green"
+                              radius={[4, 4, 0, 0]}
+                              barSize={40}
+                              name={'中期指标值'}
+                              label={{
+                                position: 'top',
+                              }}
+                            />
+                          </BarChart>
+                        )}
+                        {chartMetric === 'consumption' && (
+                          <BarChart
+                            data={chartData}
+                            margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
+                            width={550}
+                            height={350}
+                          >
+                            <text
+                              x="50%"
+                              y={20}
+                              textAnchor="middle"
+                              style={{ fontSize: '16px', fontWeight: 'bold' }}
+                            >
+                              {`${selectedAlgorithm.toUpperCase()} 在 ${selectedDataset} 数据集上的功耗比测试结果`}
+                            </text>
+                            <YAxis
+                              label={{
+                                value: `性能值(${getYAxisUnit('consumption')})`,
+                                angle: -90,
+                                position: 'insideLeft'
+                              }}
+                            />
+                            <XAxis stroke="#000000" />
+                            <Legend
+                              verticalAlign="bottom"
+                              height={36}
+                              wrapperStyle={{ fontSize: '14px', paddingTop: '10px' }}
+                            />
+                            <Bar
+                              dataKey="consumption"
+                              fill="#1976d2"
+                              name={'性能功耗比'}
+                              radius={[4, 4, 0, 0]}
+                              barSize={40}
+                              label={{
+                                position: 'top',
+                                formatter: (value) => value.toFixed(4)
+                              }}
+                            />
+                            <Bar
+                              dataKey="ctarget"
+                              fill="green"
+                              radius={[4, 4, 0, 0]}
+                              barSize={40}
+                              name={'性能功耗比中期指标值'}
+                              label={{
+                                position: 'top',
+                              }}
+                            />
+                          </BarChart>
+                        )}
+                      </Box>
+                    ) : (
+                      <Typography variant="body1">
+                        性能总结将在执行完成后显示...
+                      </Typography>
+                    )}
                   </Box>
                 </Paper>
               </Grid>

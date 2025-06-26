@@ -1,7 +1,7 @@
 // 代码数据
 export const codeData = {
     'device-cga': {
-      'bfs': `# 这里应该是BFS的CGA代码
+      'bfs': `# 这里是BFS的CGA代码
 from graph_dsl import *
 
 class BFSKernel(GraphTraversalKernel):
@@ -142,7 +142,7 @@ class KcoreKernel(GraphTraversalKernel):
     return self.degree`,
 
     
-      'kclique': `# 这里应该是K-Clique的CGA代码
+      'kclique': `# 这里是K-Clique的CGA代码
 from graph_dsl import *
 
 class KCliqueKernel(GraphMiningKernel):
@@ -173,7 +173,7 @@ class KCliqueKernel(GraphMiningKernel):
     self.cf_cnt = self.CGAprop.res`,
 
 
-      'ppr': `# 这里应该是PPR的CGA代码
+      'ppr': `# 这里是PPR的CGA代码
 from graph_dsl import *
 
 class PPRKernel(GraphTraversalKernel):
@@ -211,7 +211,7 @@ class PPRKernel(GraphTraversalKernel):
     return self.pr`,
 
 
-      'gcn': `# 这里应该是GCN的CGA代码
+      'gcn': `# 这里是GCN的CGA代码
 from graph_dsl import *
 
 class GCNKernel(GraphLearningKernel):
@@ -302,7 +302,7 @@ class GraphAlgorithm(GraphTraversalKernel):
         pass`,
 
 
-      'framework': '// 这里应该是框架转换生成的代码'
+      'framework': '// 这里是框架转换生成的代码'
     },
     'host-code': {
       'default': `// Input: Graph G, number of iterations iter
@@ -493,7 +493,7 @@ module {
 }`,
       'custom': `图遍历算法为统一编程框架CGA实现
 经过编译器前端修改生成GraphIR代码`,
-      'framework': `// 这里应该是框架转换生成的代码`
+      'framework': `// 这里是框架转换生成的代码`
     },
     'matrix-ir': {
       'bfs': `// 这是BFS的MatrixIR代码
@@ -1075,7 +1075,7 @@ module {
 }`,
       'custom': `经过图-矩阵转换及编译优化后
 生成MatrixIR中间代码`,
-      'framework': '// 这里应该是框架转换生成的代码'
+      'framework': '// 这里是框架转换生成的代码'
     },
     'hardware-instruction': {
       'bfs': `% BFS的硬件指令代码

@@ -85,7 +85,8 @@ const CodeDisplay = ({
 
     // 根据代码长度决定显示速度和每次显示的行数
     const isLongCode = codeLines.length > 30;
-    const linesPerStep = isLongCode ? 3 : 1;
+    // const linesPerStep = isLongCode ? 3 : 1;
+    const linesPerStep = 1;
     const intervalTime = isLongCode ? 50 : 80;
     
     const interval = setInterval(() => {
