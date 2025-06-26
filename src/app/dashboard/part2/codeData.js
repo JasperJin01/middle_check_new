@@ -2081,7 +2081,6 @@ class SSSP_Pregel(AppAssets):
           v.send(e.vertex(), new_dist + e.get_int(2))
           # v.send(e.vertex(), new_dist + e.weight())`,
         'ppr': `# 这里是GraphScope的PPR代码
-// GraphScope PPR示例代码
 import graphscope as gs
 from graphscope.dataset import load_ldbc
 
@@ -2098,7 +2097,6 @@ print(results)`
       },
       'dgl': {
         'gcn': `# 这里是DGL的GCN代码
-// DGL GCN示例代码
 import dgl
 import torch
 import torch.nn as nn

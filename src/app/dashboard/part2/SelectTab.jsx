@@ -337,6 +337,7 @@ const SelectTab = ({
           
           {currentTabId === 'existing-framework' && (
             <TabPanel value={tabValue} index={tabValue}>
+              <Box sx={{ mb: 0.8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}></Box>
               <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                 <FormControl sx={{ flex: 1 }}>
                   <InputLabel sx={{ fontSize: '1rem' }}>框架选择</InputLabel>
@@ -364,8 +365,6 @@ const SelectTab = ({
                   </Select>
                 </FormControl>
               </Box>
-
-              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}></Box>
 
               <CodeDisplay 
                 code={editedCodes['existing-framework'] || getFrameworkCode()} 

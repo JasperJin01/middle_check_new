@@ -350,9 +350,7 @@ const Page = () => {
         setShowMiddlePanel(true);
         setShowRightPanel(true);
         setActiveTab('existing-framework');
-        if (!frameworkSelection.framework) {
-          setSelectedAlgorithm('framework');
-        }
+        setSelectedAlgorithm('framework');
         break;
       case '转换':
         console.log(frameworkSelection);
@@ -364,15 +362,6 @@ const Page = () => {
           console.log(cgaCode);
           
           if (cgaCode) {
-            // 添加注释说明代码来源
-            const convertedCode = `# 从${frameworkSelection.framework}框架转换生成的${algorithmName.toUpperCase()}算法代码\n\n${cgaCode}`;
-            
-            console.log();
-            // 更新设备端CGA代码
-            setEditedCodes(prev => ({
-              ...prev,
-              'device-cga': convertedCode
-            }));
             
             // 激活设备端CGA代码选项卡
             setShowMiddlePanel(true);
@@ -382,6 +371,11 @@ const Page = () => {
             
             // 启用CGA代码的动画效果
             setCgaAnimationEnabled(true);
+            
+            // 1.5s后取消动画效果（防止点击转换按钮后，CGA代码框一直有动画效果）
+            setTimeout(() => {
+              setCgaAnimationEnabled(false);
+            }, 1500);
           }
         }
         break;
