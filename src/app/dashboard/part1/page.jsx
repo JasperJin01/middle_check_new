@@ -464,12 +464,35 @@ export default function Page() {
                   color: '#4caf50',
                   lineHeight: 1.6,
                   borderBottom: '1px solid rgba(255,255,255,0.1)',
-                  py: 0.5
+                  py: 0.5,
+                  '& .highlight': {
+                    color: '#ff5252'
+                  }
                 }
               }} ref={logBoxRef}>
-                {logs.map((log, index) => (
-                  <div key={index}>{`> ${log}`}</div>
-                ))}
+                {logs.map((log, index) => {
+                  // 高亮显示特定性能数据
+                  let modifiedLog = log;
+                  
+                  // 检查性能数据行
+                  if (log.includes('ACC Cycle') || 
+                      log.includes('FPGA Frequency') || 
+                      log.includes('PR Performace') ||
+                      log.includes('Timestamp')) {
+                    // 将整行标记为高亮
+                    modifiedLog = <span className="highlight">{log}</span>;
+                  } 
+                  // 检查性能摘要区块
+                  else if (log.includes('FPGA KERNEL PERFORMANCE SUMMARY') || 
+                          (log.includes('|') || log.includes('+---')) && 
+                          (index > 0 && 
+                           (logs.slice(Math.max(0, index-10), index).some(prevLog => 
+                             prevLog.includes('FPGA KERNEL PERFORMANCE SUMMARY'))))) {
+                    modifiedLog = <span className="highlight">{log}</span>;
+                  }
+                  
+                  return (<div key={index}>{`> `}{modifiedLog}</div>);
+                })}
               </Box>
             </Paper>
           </Grid>
@@ -534,7 +557,6 @@ export default function Page() {
                     sx={{ mb: 2 }}
                   >
                     <Tab label="执行时间" value="time" />
-                    <Tab label="加速比" value="speedUp" />
                     <Tab label="吞吐量" value="throughput" />
                   </Tabs>
 
@@ -553,6 +575,23 @@ export default function Page() {
               formatter={(value, name, props) => {
                 if (chartMetric === 'throughput') {
                   return [`${value.toFixed(3)} ${getThroughputUnit(props.payload.algorithm)}`, name];
+                }
+                if (chartMetric === 'time' && name === "CPU（Intel Xeon Gold 6338）时间") {
+                  // 同时显示CPU时间和加速比
+                  return [value.toFixed(3), name];
+                }
+                if (chartMetric === 'time' && name === "加速器时间") {
+                  // 计算并显示加速比
+                  const speedUp = props.payload.cpu / value;
+                  return [
+                    <span>
+                      {value.toFixed(3)}<br/>
+                      {/* 加一个可以修改高度的换行 */}
+                      <Box sx={{ height: 12 }} />
+                      <span style={{color: '#CC556A', fontWeight: 'bold'}}>加速比: {speedUp.toFixed(3)}x</span>
+                    </span>, 
+                    name
+                  ];
                 }
                 return [value, name];
               }}
@@ -580,15 +619,6 @@ export default function Page() {
                         barSize={50}
                     />
                 </>
-            )}
-
-            {chartMetric === 'speedUp' && (
-                <Bar
-                    dataKey="speedUp"
-                    fill="#ef5350"
-                    name="加速比"
-                    barSize={50}
-                />
             )}
 
             {chartMetric === 'throughput' && (
