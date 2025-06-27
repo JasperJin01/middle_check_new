@@ -305,9 +305,7 @@ const SelectTab = ({
             <TabPanel value={tabValue} index={tabValue}>
               <CodeDisplay 
                 code={selectedAlgorithm === 'custom' && editedCodes['device-cga'] ? editedCodes['device-cga'] : getCodeContent('device-cga')} 
-                originalCode={getOriginalCode('device-cga')}
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'device-cga')}
-                editable={selectedAlgorithm === 'custom'}
                 language="python"
                 animated={cgaAnimationEnabled}
               />
@@ -318,9 +316,7 @@ const SelectTab = ({
             <TabPanel value={tabValue} index={tabValue}>
               <CodeDisplay 
                 code={getCodeContent('host-code')} 
-                originalCode={getOriginalCode('host-code')}
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'host-code')}
-                editable={false}
                 language="cpp"
                 animated={false}
               />
@@ -367,7 +363,6 @@ const SelectTab = ({
               <CodeDisplay 
                 code={editedCodes['existing-framework'] || getFrameworkCode()} 
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'existing-framework')}
-                editable={false}
                 language="python"
                 animated={false}
               />
@@ -379,9 +374,7 @@ const SelectTab = ({
             <TabPanel value={tabValue} index={tabValue}>
               <CodeDisplay 
                 code={getCodeContent('graph-ir')} 
-                originalCode={getOriginalCode('graph-ir')}
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'graph-ir')}
-                editable={false}
                 language="mlir"
                 animated={activeAnimatedTabs.includes('graph-ir')}
               />
@@ -392,9 +385,7 @@ const SelectTab = ({
             <TabPanel value={tabValue} index={tabValue}>
               <CodeDisplay 
                 code={getCodeContent('matrix-ir')} 
-                originalCode={getOriginalCode('matrix-ir')}
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'matrix-ir')}
-                editable={false}
                 language="mlir"
                 animated={activeAnimatedTabs.includes('matrix-ir')}
               />
@@ -405,9 +396,7 @@ const SelectTab = ({
             <TabPanel value={tabValue} index={tabValue}>
               <CodeDisplay 
                 code={getCodeContent('hardware-instruction')} 
-                originalCode={getOriginalCode('hardware-instruction')}
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'hardware-instruction')}
-                editable={false}
                 language="hardware"
                 animated={activeAnimatedTabs.includes('hardware-instruction')}
               />
