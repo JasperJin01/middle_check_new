@@ -18,6 +18,8 @@ import 'prismjs/components/prism-markup-templating';
 import 'prismjs/components/prism-css';
 import 'prismjs/components/prism-json';
 import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-asm6502';  // 6502汇编
+import 'prismjs/components/prism-nasm';     // NASM汇编
 
 // 添加全局样式覆盖Prism默认样式
 // font-size 是黑色字体的大小
@@ -113,8 +115,8 @@ const CodeDisplay = ({
           // 如果是MLIR，使用C++作为替代的语法高亮
           prismLanguage = 'cpp';
         } else if (language === 'hardware') {
-          // 硬件指令使用普通文本
-          prismLanguage = 'wasm';
+          // 硬件指令使用汇编语法基础
+          prismLanguage = 'asm6502'; // 或其他适合的语言
         }
 
         if (animated) {

@@ -125,8 +125,6 @@ const SelectTab = ({
   }, [activeTab, panelType, visibleTabs]);
 
 
-
-
   const handleChange = (event, newValue) => {
     setTabValue(newValue);
     

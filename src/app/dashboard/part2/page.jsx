@@ -81,15 +81,15 @@ const algorithmMappings = {
   },
   'kclique': {
     url: 'cf',
-    datasets: ['euroroad', 'physics'],
+    datasets: ['Rmat-16','Rmat-18', 'Rmat-20','euroroad', 'physics'],
   },
   'ppr': {
     url: 'ppr',
-    datasets: ['smallgraph', 'physics', 'facebook'],
+    datasets: ['Rmat-16','Rmat-18','Rmat-20','smallgraph', 'physics', 'facebook'],
   },
   'gcn': {
     url: 'gcn',
-    datasets: ['cora'],
+    datasets: ['Rmat-16','Rmat-17','Rmat-18', 'cora'],
   }
 };
 
@@ -168,8 +168,8 @@ const Page = () => {
   };
   
   // 获取算法URL
-  const getAlgorithmUrl = (algo) => {
-    return algorithmMappings[algo]?.url || algo;
+  const getAlgorithmUrl = () => {
+    return algorithmMappings[selectedAlgorithm]?.url || algo;
   };
   
   // 获取数据集URL
@@ -178,15 +178,20 @@ const Page = () => {
   };
 
   const handleRun = async () => {
-    if (isRunning || !selectedAlgorithm) {
+    if (isRunning || selectedAlgorithm === 'custom' || selectedDataset === '') {
+      console.log('当前程序正在运行，或未选择算法或数据集')
       return;
     }
+    
+    // 显示底部面板
+    setShowBottomPanels(true);
 
     setIsRunning(true);
     setResults({ terminalOutput: 'Connecting to server...\n' });
 
     try {
-      const eventSource = new EventSource(`${request.BASE_URL}/part3/moni2/${selectedAlgorithm}/${selectedDataset}/`);
+      
+      const eventSource = new EventSource(`${request.BASE_URL}/part3/moni/1/${getAlgorithmUrl()}/${selectedDataset}/`);
       let terminalOutput = '';
 
       eventSource.onmessage = async (event) => {
@@ -338,6 +343,7 @@ const Page = () => {
         setShowMiddlePanel(true);
         setShowRightPanel(false);
         setActiveTab('device-cga');
+        setSelectedAlgorithm('custom');
         setCgaAnimationEnabled(false);
         
         // 重置现有图计算框架的选择，避免闪动bug
@@ -405,8 +411,7 @@ const Page = () => {
         setActiveTab('host-code');
         break;
       case 'exe执行':
-        // 显示底部面板
-        setShowBottomPanels(true);
+
         // 执行程序
         handleRun();
         break;
@@ -614,7 +619,7 @@ const Page = () => {
                   <Typography variant="h6" sx={{ 
                     fontWeight: 700, mb: 2, color: 'primary.main'
                   }}>
-                    性能总结
+                    结果展示
                   </Typography>
                   <Box sx={{ 
                     flex: 1,
@@ -646,7 +651,7 @@ const Page = () => {
                               textAnchor="middle"
                               style={{ fontSize: '16px', fontWeight: 'bold' }}
                             >
-                              {`${selectedAlgorithm.toUpperCase()} 在 ${selectedDataset} 数据集上的性能测试结果`}
+                              {`${selectedAlgorithm.toUpperCase()} 性能测试结果`}
                             </text>
                             <YAxis
                               label={{
@@ -738,7 +743,7 @@ const Page = () => {
                       </Box>
                     ) : (
                       <Typography variant="body1">
-                        性能总结将在执行完成后显示...
+                        性能结果将在执行完成后显示...
                       </Typography>
                     )}
                   </Box>
