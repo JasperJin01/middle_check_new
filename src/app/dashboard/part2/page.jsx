@@ -23,6 +23,8 @@ import { BarChart, Bar, XAxis, YAxis, Legend } from 'recharts';
 import SelectTab from './SelectTab';
 import { codeData } from './codeData';
 import FlowDiagram from './FlowDiagram';
+import useHandleRun from './handleRun';
+import { chartResults, defaultPerformanceValues, algorithmNameMapping } from './chartResults';
 
 // 示例代码，在网络请求失败时使用
 const sampleCodes = {
@@ -103,8 +105,6 @@ const Page = () => {
   const [editedCodes, setEditedCodes] = useState({});
   const [animatedTabs, setAnimatedTabs] = useState([]);
   const [visibleIRTabs, setVisibleIRTabs] = useState([]);
-  const [isRunning, setIsRunning] = useState(false);
-  const [results, setResults] = useState({ terminalOutput: '' });
   const resultsBoxRef = useRef(null);
   const [chartData, setChartData] = useState([]);
   const [chartMetric, setChartMetric] = useState('performance');
@@ -120,6 +120,9 @@ const Page = () => {
     framework: '',
     algorithm: ''
   });
+
+  // 使用抽离出来的handleRun hook
+  const { handleRun, isRunning, results, setResults } = useHandleRun(algorithmMappings);
 
   // 监听框架选择变化，更新selectedFramework
   useEffect(() => {
@@ -175,95 +178,6 @@ const Page = () => {
   // 获取数据集URL
   const getDatasetUrl = (dataset) => {
     return dataset;
-  };
-
-  const handleRun = async () => {
-    if (isRunning || selectedAlgorithm === 'custom' || selectedDataset === '') {
-      console.log('当前程序正在运行，或未选择算法或数据集')
-      return;
-    }
-    
-    // 显示底部面板
-    setShowBottomPanels(true);
-
-    setIsRunning(true);
-    setResults({ terminalOutput: 'Connecting to server...\n' });
-
-    try {
-      
-      const eventSource = new EventSource(`${request.BASE_URL}/part3/moni/1/${getAlgorithmUrl()}/${selectedDataset}/`);
-      let terminalOutput = '';
-
-      eventSource.onmessage = async (event) => {
-        if (event.data === '[done]') {
-          eventSource.close();
-          setResults(prev => ({
-            ...prev,
-            terminalOutput: prev.terminalOutput + 'Copying results...\n'
-          }));
-
-          try {
-            const res = await fetch(`${request.BASE_URL}/part3/result/2/${selectedAlgorithm}/`);
-            const jsonData = await res.json();
-
-            setResults(prev => ({
-              ...prev,
-              terminalOutput: prev.terminalOutput + 'Completed\n'
-            }));
-
-            const originalCode = selectedFramework === 'GraphScope' ? jsonData.data.pregel : jsonData.data.dgl;
-            setOriginalCodeDisplay(originalCode ? originalCode.join('\n') : sampleCodes[selectedAlgorithm].frameworkCode);
-
-            setTransformedCode(jsonData.data.CGA ? jsonData.data.CGA.join('\n') : sampleCodes[selectedAlgorithm].cgaCode);
-
-            setResults(prev => ({
-              ...prev,
-              graphIR: jsonData.data.GraphIR ? jsonData.data.GraphIR.join('\n') : '',
-              matrixIR: jsonData.data.MatrixIR ? jsonData.data.MatrixIR.join('\n') : '',
-              hardwareInstructions: jsonData.data.asm ? jsonData.data.asm.join('\n') : ''
-            }));
-            
-            // 生成图表数据用于显示
-            generateChartData();
-          } catch (error) {
-            setResults(prev => ({
-              ...prev,
-              terminalOutput: prev.terminalOutput + `Failed to get results: ${error.message}\n`
-            }));
-          } finally {
-            setIsRunning(false);
-          }
-
-        } else if (event.data === '[error]') {
-          eventSource.close();
-          setResults(prev => ({
-            ...prev,
-            terminalOutput: prev.terminalOutput + '\nExecution error\n'
-          }));
-          setIsRunning(false);
-        } else {
-          setResults(prev => ({
-            ...prev,
-            terminalOutput: prev.terminalOutput + event.data + '\n'
-          }));
-        }
-      };
-
-      eventSource.onerror = () => {
-        eventSource.close();
-        setResults(prev => ({
-          ...prev,
-          terminalOutput: prev.terminalOutput + '\nConnection error\n'
-        }));
-        setIsRunning(false);
-      };
-
-    } catch (error) {
-      setResults({
-        terminalOutput: `Execution failed: ${error.message}`
-      });
-      setIsRunning(false);
-    }
   };
   
   // 自动滚动到底部
@@ -324,13 +238,42 @@ const Page = () => {
       return;
     }
     
-    // 只生成当前选择的数据集的数据
+    let performanceValue = 0;
+    let ptargetValue = 3;
+    let consumptionValue = 0;
+    let ctargetValue = 8;
+    
+    // 先检查chartResults中是否有对应算法和数据集的数据
+    if (chartResults[selectedAlgorithm] && chartResults[selectedAlgorithm][selectedDataset]) {
+      const resultData = chartResults[selectedAlgorithm][selectedDataset];
+      performanceValue = resultData.find(item => item.key.includes('性能('))?.value || 0;
+      ptargetValue = resultData.find(item => item.key.includes('性能指标要求'))?.value || 3;
+      consumptionValue = resultData.find(item => item.key.includes('性能功耗比('))?.value || 0;
+      ctargetValue = resultData.find(item => item.key.includes('性能功耗比指标要求'))?.value || 8;
+    } else {
+      // 如果没有预定义数据，使用默认性能值
+      const defaultValues = defaultPerformanceValues[selectedAlgorithm]?.[selectedDataset];
+      if (defaultValues) {
+        performanceValue = defaultValues.performance['1000MHz'];
+        ptargetValue = defaultValues.target.performance;
+        consumptionValue = defaultValues.consumption;
+        ctargetValue = defaultValues.target.consumption;
+      } else {
+        // 如果没有默认值，使用随机生成的数据
+        performanceValue = Math.random() * 4 + 3;
+        ptargetValue = 3;
+        consumptionValue = Math.random() * 3 + 8;
+        ctargetValue = 8;
+      }
+    }
+    
+    // 生成图表数据
     const chartData = [{
       name: '当前值',
-      performance: Math.random() * 5 + 1, // 随机生成1-6之间的性能值
-      ptarget: 3.5, // 固定的中期指标值
-      consumption: Math.random() * 10 + 5, // 随机生成5-15之间的性能功耗比
-      ctarget: 8.0 // 固定的性能功耗比中期指标值
+      performance: performanceValue,
+      ptarget: ptargetValue,
+      consumption: consumptionValue,
+      ctarget: ctargetValue
     }];
     
     setChartData(chartData);
@@ -411,9 +354,8 @@ const Page = () => {
         setActiveTab('host-code');
         break;
       case 'exe执行':
-
         // 执行程序
-        handleRun();
+        handleRun(selectedAlgorithm, selectedDataset, selectedFramework, showBottomPanels, setShowBottomPanels, generateChartData);
         break;
       default:
         break;
@@ -702,7 +644,7 @@ const Page = () => {
                               textAnchor="middle"
                               style={{ fontSize: '16px', fontWeight: 'bold' }}
                             >
-                              {`${selectedAlgorithm.toUpperCase()} 在 ${selectedDataset} 数据集上的功耗比测试结果`}
+                              {`${selectedAlgorithm.toUpperCase()} 功耗比测试结果`}
                             </text>
                             <YAxis
                               label={{
@@ -711,7 +653,7 @@ const Page = () => {
                                 position: 'insideLeft'
                               }}
                             />
-                            <XAxis stroke="#000000" />
+                            <XAxis dataKey={selectedDataset} />
                             <Legend
                               verticalAlign="bottom"
                               height={36}

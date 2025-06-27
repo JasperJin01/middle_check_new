@@ -1,88 +1,50 @@
 "use client";
 import React, { useState } from 'react';
-import {
-  Box,
-  Grid,
-  Paper,
-  Typography,
-  Select,
-  MenuItem,
-  Button,
-  Tabs,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  LinearProgress,
-} from '@mui/material';
+import { Box, Grid, Paper, Typography, Select, MenuItem, Button, Tabs, Tab, Table, 
+  TableBody, TableCell, TableContainer, TableHead, TableRow, LinearProgress } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine } from 'recharts';
-import request from '@/lib/request/request'; // 假设你有一个请求库
+import request from '@/lib/request/request';
+import { PERFORMANCE_DATA, midtermMetrics } from './constData'
 
 const algorithms = ['PageRank', 'k-Clique', 'GCN'];
-// const datasets = ['Rmat-16','Rmat-18','Rmat-20', 'Wiki-Vote', 'Ego-Gplus', 'Web-Google'];
 const datasets = ['Rmat-16', 'Rmat-17', 'Rmat-18', 'Rmat-19', 'Rmat-20'];
 const allDatasetsOption = 'all-datasets';
 
-// 新增算法与数据集允许组合配置
-const allowedCombinations = {
-  'PageRank': ['Rmat-16', 'Rmat-17', 'Rmat-18', 'Rmat-19', 'Rmat-20'],
-  'k-Clique': ['Rmat-16', 'Rmat-17', 'Rmat-18', 'Rmat-19', 'Rmat-20'],
-  'GCN': ['Rmat-16', 'Rmat-17', 'Rmat-18', 'Rmat-19', 'Rmat-20'],
-};
-
 const algorithmDetails = {
-  PageRank: {
-    description: '标准图遍历算法',
-  },
-  'k-Clique': {
-    description: '标准图挖掘算法',
-  },
-  GCN: {
-    description: '标准图学习算法',
-  },
+  PageRank: { description: '标准图遍历算法', },
+  'k-Clique': { description: '标准图挖掘算法', },
+  GCN: { description: '标准图学习算法', },
 };
 
 const datasetInfo = {
   'Rmat-16': { nodes: '2^16', edges: '2^20' },
   'Rmat-17': { nodes: '2^17', edges: '2^21' },
-  'Rmat-18': { nodes: '2^18', edges: '2^22' },
-  'Rmat-19': { nodes: '2^19', edges: '2^23' },
-  'Rmat-20': { nodes: '2^20', edges: '2^24' },
-};
-
-// 添加中期指标常量
-const midtermMetrics = {
-  'PageRank': 6, // GTEPS
-  'k-Clique': 1.5, // GTSPS
-  'GCN': 1, // GOPS
+  'Rmat-18': { nodes: '2^18', edges: '2^21' },
+  'Rmat-19': { nodes: '2^19', edges: '2^22' },
+  'Rmat-20': { nodes: '2^20', edges: '2^23' },
 };
 
 // 获取吞吐量单位
 const getThroughputUnit = (algorithm) => {
   switch(algorithm) {
-    case 'PageRank':
-      return 'GTEPS';
-    case 'k-Clique':
-      return 'GTSPS';
-    case 'GCN':
-      return 'GOPS';
-    default:
-      return '';
+    case 'PageRank': return 'GTEPS';
+    case 'k-Clique': return 'GTSPS';
+    case 'GCN': return 'GOPS';
+    default: return '';
   }
 };
+
 
 export default function Page() {
   const [selectedAlgo, setSelectedAlgo] = useState(algorithms[0]);
   const [selectedDataset, setSelectedDataset] = useState(datasets[0]);
+  // 控制标签页切换
   const [tabValue, setTabValue] = useState(0);
   const [logs, setLogs] = useState([]);
   const [running, setRunning] = useState(false);
   const [performanceData, setPerformanceData] = useState([]);
   const [chartMetric, setChartMetric] = useState('time');
-  const [progress, setProgress] = useState(0);
+  // 参考线（中期指标）状态
   const [showReferenceLine, setShowReferenceLine] = useState(false);
   const logBoxRef = React.useRef(null);
 
@@ -98,31 +60,38 @@ export default function Page() {
     scrollToBottom();
   }, [logs]);
 
-  // 新增判断按钮是否可用的逻辑
-  const isButtonDisabled = () => {
-    if (running) return true;
+  // 判断按钮是否不可用
+  const isButtonDisabled = () => running;
 
-    // 判断单个数据集是否允许
-    if (selectedDataset !== allDatasetsOption) {
-      return !allowedCombinations[selectedAlgo].includes(selectedDataset);
-    }
-
-    // 判断"全部数据集"是否允许（检查算法是否有可用的数据集）
-    return true;
-  };
-
-  // 生成随机性能数据
+  // 生成性能数据
   const generatePerformanceData = (res) => {
-    const baseData = res.data;
+    const baseData = res.data || res; // 兼容两种数据格式
+    console.log(selectedAlgo)
+    console.log(selectedDataset)
+
+    console.log(PERFORMANCE_DATA[baseData.Algorithm]["CPU-Time(s)"])
+    const algorithmData = PERFORMANCE_DATA[baseData.Algorithm]; // 获取算法对应的数组
+    const datasetEntry = algorithmData.find(item => item.Dataset === baseData.Dataset); // 查找匹配的数据集
+
+    if (datasetEntry) {
+      console.log(datasetEntry["CPU-Time(s)"]); // 正确获取CPU时间
+      console.log(datasetEntry["ACC-Time(s)"]); // 正确获取加速器时间
+    }
+    
+    const cpu = datasetEntry["CPU-Time(s)"];
+    const accelerator = baseData["ACC-Time(s)"];
+  
     return {
       combinedKey: `${baseData.Algorithm}-${baseData.Dataset}`,
       algorithm: baseData.Algorithm,
       dataset: baseData.Dataset,
       nodes: baseData.Vertices,
       edges: baseData.Edges,
-      cpu: baseData['CPU-Time(s)'],
-      accelerator: baseData["ACC-Time(s)"],
-      speedUp: baseData["Speedup"],
+      // cpu: baseData['CPU-Time(s)'],
+      cpu,
+      accelerator,
+      speedUp: cpu / accelerator,
+
       throughput: baseData["GTSPS"]
     };
   };
@@ -143,16 +112,37 @@ export default function Page() {
 
   const handleRun = async () => {
     if (running) return;
-    
+
     setRunning(true);
-    setProgress(0);
-    setLogs(['正在与服务器建立连接...']);
   
     try {
-      const targets = selectedDataset === allDatasetsOption
-        ? allowedCombinations[selectedAlgo] // 使用算法允许的数据集列表
-        : [selectedDataset];
+      // 运行“全部数据集”，使用预设数据
+      if (selectedDataset === allDatasetsOption) {
+        setLogs(prev => [...prev, '正在加载全部数据集...']);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const allResults = PERFORMANCE_DATA[selectedAlgo].map(data => ({
+          combinedKey: `${data.Algorithm}-${data.Dataset}`,
+          algorithm: data.Algorithm,
+          dataset: data.Dataset,
+          nodes: data.Vertices,
+          edges: data.Edges,
+          cpu: data['CPU-Time(s)'],
+          accelerator: data['ACC-Time(s)'],
+          speedUp: data['Speedup'],
+          throughput: data['GTSPS']
+        }));
   
+        setPerformanceData(allResults);
+        setLogs(prev => [...prev, '全部数据集加载完成']);
+        setRunning(false);
+        return;
+      }
+  
+      setLogs([`开始执行图算法 ${selectedAlgo}，数据集 ${selectedDataset}：`]);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      setLogs(prev => [...prev, '正在与服务器建立连接...']);
+      
       // 检查是否需要清空之前的数据
       const shouldClearData = performanceData.length > 0 && 
         performanceData[0].algorithm !== selectedAlgo;
@@ -160,45 +150,25 @@ export default function Page() {
       if (shouldClearData) {
         setPerformanceData([]);
       }
-  
-      // 批量执行任务
-      for (const dataset of targets) {
+    
         let urlAlgo, urlData;
         
         // 算法URL
         switch(selectedAlgo) {
-          case 'PageRank':
-            urlAlgo = 'pagerank';
-            break;
-          case 'k-Clique':
-            urlAlgo = 'kclique';
-            break;
-          case 'GCN':
-            urlAlgo = 'gcn';
-            break;
-          default:
-            throw new Error(`不支持的算法: ${selectedAlgo}`);
+          case 'PageRank': urlAlgo = 'pagerank'; break;
+          case 'k-Clique': urlAlgo = 'kclique'; break;
+          case 'GCN': urlAlgo = 'gcn'; break;
+          default: throw new Error(`不支持的算法: ${selectedAlgo}`);
         }
   
         // 数据集URL映射
-        switch(dataset) {
-          case 'Rmat-16':
-            urlData = 'rmat16';
-            break;
-          case 'Rmat-17':
-            urlData = 'rmat17';
-            break;
-          case 'Rmat-18':
-            urlData = 'rmat18';
-            break;
-          case 'Rmat-19':
-            urlData = 'rmat19';
-            break;
-          case 'Rmat-20':
-            urlData = 'rmat20';
-            break;
-          default:
-            throw new Error(`不支持的数据集: ${dataset}`);
+        switch(selectedDataset) {
+          case 'Rmat-16': urlData = 'rmat16'; break;
+          case 'Rmat-17': urlData = 'rmat17'; break;
+          case 'Rmat-18': urlData = 'rmat18'; break;
+          case 'Rmat-19': urlData = 'rmat19'; break;
+          case 'Rmat-20': urlData = 'rmat20'; break;
+          default: throw new Error(`不支持的数据集: ${selectedDataset}`);
         }
   
         // 1. 执行流式命令
@@ -209,7 +179,7 @@ export default function Page() {
             eventSource.close();
             
             // 2. 显示正在拷贝result
-            setLogs(prev => [...prev, `正在拷贝 ${dataset} 的result...`]);
+            setLogs(prev => [...prev, `正在拷贝 ${selectedDataset} 的result...`]);
             
             // 3. 获取最终结果
             try {
@@ -217,46 +187,37 @@ export default function Page() {
               const jsonData = await res.json();
               
               // 4. 显示完成
-              setLogs(prev => [...prev, `${dataset} 执行完成`]);
-              setProgress(100 * (targets.indexOf(dataset) + 1) / targets.length);
+              setLogs(prev => [...prev, `✅ ${selectedAlgo}-${selectedDataset} 执行完成`]);
+              setRunning(false);
   
               // 生成新的性能数据
               const newResult = generatePerformanceData(jsonData);
               
               // 更新性能数据
               setPerformanceData(prev => {
-                const filtered = prev.filter(item => item.dataset !== dataset);
+                const filtered = prev.filter(item => item.dataset !== selectedDataset);
                 return [...filtered, newResult]
                   .sort((a, b) => datasets.indexOf(a.dataset) - datasets.indexOf(b.dataset));
               });
   
-              // 如果是最后一个数据集，设置运行状态为false
-              if (targets.indexOf(dataset) === targets.length - 1) {
-                setRunning(false);
-              }
+
             } catch (error) {
-              setLogs(prev => [...prev, `❌ 获取 ${dataset} 结果失败: ${error.message}`]);
-              setProgress(0);
+              setLogs(prev => [...prev, `❌ 获取 ${selectedAlgo}-${selectedDataset} 结果失败: ${error.message}`]);
               setRunning(false);
             }
             
           } else if (event.data === '[error]') {
             eventSource.close();
-            setLogs(prev => [...prev, `❌ ${dataset} 执行出错`]);
-            setProgress(0);
+            setLogs(prev => [...prev, `❌ 服务器执行出错：${selectedAlgo}-${selectedDataset}`]);
             setRunning(false);
           } else {
-            setLogs(prev => [...prev, `${dataset}: ${event.data}`]);
-            // 更新进度条，基于当前数据集在所有数据集中的位置
-            const currentProgress = (targets.indexOf(dataset) / targets.length) * 100 + 25;
-            setProgress(currentProgress > 100 ? 100 : currentProgress);
+            setLogs(prev => [...prev, `${event.data}`]);
           }
         };
   
         eventSource.onerror = () => {
           eventSource.close();
-          setLogs(prev => [...prev, `❌ ${dataset} 连接错误`]);
-          setProgress(0);
+          setLogs(prev => [...prev, `❌ ${selectedAlgo}-${selectedDataset} 连接错误`]);
           setRunning(false);
         };
   
@@ -269,138 +230,12 @@ export default function Page() {
             }
           }, 100);
         });
-      }
+      
     } catch (error) {
       setLogs(prev => [...prev, `❌ 执行失败: ${error.message}`]);
-      setProgress(0);
       setRunning(false);
     }
   };
-
-  // const handleRun = async () => {
-  //   if (running) return;
-    
-  //   setRunning(true);
-  //   setProgress(0);
-  //   setLogs(['正在与服务器建立连接...']);
-
-  //   try {
-  //     const targets = selectedDataset === allDatasetsOption
-  //       ? datasets
-  //       : [selectedDataset];
-
-  //     // 检查是否需要清空之前的数据
-  //     const shouldClearData = performanceData.length > 0 && 
-  //       performanceData[0].algorithm !== selectedAlgo;
-
-  //     if (shouldClearData) {
-  //       setPerformanceData([]);
-  //     }
-
-  //     // 批量执行任务
-  //     for (const dataset of targets) {
-  //       let urlAlgo, urlData;
-        
-  //       // 算法URL
-  //       switch(selectedAlgo) {
-  //         case 'PageRank':
-  //           urlAlgo = 'pagerank';
-  //           break;
-  //         case 'k-Clique':
-  //           urlAlgo = 'kclique';
-  //           break;
-  //         case 'GCN':
-  //           urlAlgo = 'gcn';
-  //           break;
-  //         default:
-  //           throw new Error(`不支持的算法: ${selectedAlgo}`);
-  //       }
-
-  //       // 数据集URL映射
-  //       switch(dataset) {
-  //         case 'Rmat-16':
-  //           urlData = 'rmat16';
-  //           break;
-  //         case 'Rmat-17':
-  //           urlData = 'rmat17';
-  //           break;
-  //         case 'Rmat-18':
-  //           urlData = 'rmat18';
-  //           break;
-  //         case 'Rmat-19':
-  //           urlData = 'rmat19';
-  //           break;
-  //         case 'Rmat-20':
-  //           urlData = 'rmat20';
-  //           break;
-  //         default:
-  //           throw new Error(`不支持的数据集: ${dataset}`);
-  //       }
-
-  //       // 1. 执行流式命令
-  //       const eventSource = new EventSource(`${request.BASE_URL}/part1/execute/${urlAlgo}/${urlData}/`);
-        
-  //       eventSource.onmessage = async (event) => {
-  //         if (event.data === '[done]') {
-  //           eventSource.close();
-            
-  //           // 2. 显示正在拷贝result
-  //           setLogs(prev => [...prev, '正在拷贝result...']);
-            
-  //           // 3. 获取最终结果
-  //           try {
-  //             const res = await fetch(`${request.BASE_URL}/part1/result/`);
-  //             const jsonData = await res.json();
-              
-  //             // 4. 显示完成
-  //             setLogs(prev => [...prev, '执行完成']);
-  //             setProgress(100);
-
-  //             // 生成新的性能数据
-  //             const newResult = generatePerformanceData(jsonData);
-              
-  //             // 更新性能数据
-  //             setPerformanceData(prev => {
-  //               const filtered = prev.filter(item => item.dataset !== dataset);
-  //               return [...filtered, newResult]
-  //                 .sort((a, b) => datasets.indexOf(a.dataset) - datasets.indexOf(b.dataset));
-  //             });
-  //             setRunning(false)
-  //           } catch (error) {
-  //             setLogs(prev => [...prev, `❌ 获取结果失败: ${error.message}`]);
-  //             setProgress(0);
-  //           }
-            
-  //         } else if (event.data === '[error]') {
-  //           eventSource.close();
-  //           setLogs(prev => [...prev, '❌ 执行出错']);
-  //           setProgress(0);
-  //         } else {
-  //           setLogs(prev => [...prev, event.data]);
-  //         }
-  //       };
-
-  //       eventSource.onerror = () => {
-  //         eventSource.close();
-  //         setLogs(prev => [...prev, '❌ 连接错误']);
-  //         setProgress(0);
-  //       };
-
-  //       // 等待当前数据集处理完成
-  //       await new Promise((resolve) => {
-  //         const checkInterval = setInterval(() => {
-  //           if (!eventSource.readyState || eventSource.readyState === 2) {
-  //             clearInterval(checkInterval);
-  //             resolve();
-  //           }
-  //         }, 100);
-  //       });
-  //     }
-  //   } catch (error) {
-  //     setLogs(prev => [...prev, `❌ 执行失败: ${error.message}`]);
-  //     setProgress(0);
-  //   }
-  // };
 
   return (
     <Box sx={{ p: 3, backgroundColor: '#f5f6fa' }}>
@@ -535,7 +370,7 @@ export default function Page() {
               >
                 {running ? '执行中...' : '开始执行'}
               </Button>
-              {running && <LinearProgress value={progress} sx={{ mt: 1 }} />}
+              {running && <LinearProgress sx={{ mt: 1 }} />}
             </Paper>
           </Grid>
 
@@ -684,7 +519,7 @@ export default function Page() {
                           <TableCell>{row.edges.toLocaleString()}</TableCell>
                           <TableCell>{row.cpu.toFixed(3)}</TableCell>
                           <TableCell>{row.accelerator.toFixed(3)}</TableCell>
-                          <TableCell>{row.speedUp}</TableCell>
+                          <TableCell>{row.speedUp.toFixed(3)}</TableCell>
                           <TableCell>{`${row.throughput.toFixed(3)} ${getThroughputUnit(row.algorithm)}`}</TableCell>
                         </TableRow>
                       ))}
@@ -735,7 +570,7 @@ export default function Page() {
                     <Bar
                         dataKey="cpu"
                         fill="#7f58af"
-                        name="CPU时间"
+                        name="CPU（Intel Xeon Gold 6338）时间"
                         barSize={50}
                     />
                     <Bar
@@ -779,7 +614,8 @@ export default function Page() {
                     value: `中期指标\n(${midtermMetrics[selectedAlgo]} ${getThroughputUnit(selectedAlgo)})`,
                     position: 'insideRight',
                     fill: 'red',
-                    fontSize: 12,
+                    fontSize: 14,
+                    fontWeight: 'bold', 
                     dy: -10,
                     opacity: showReferenceLine ? 1 : 0,
                     transition: 'opacity 0.3s'
@@ -795,65 +631,6 @@ export default function Page() {
           </Grid>
         </Grid>
       </Grid>
-      {/* 代码转化卡片 */}
-     {/*  <Grid item xs={12} sx={{ mt: 2 }}>
-            <Paper elevation={3} sx={{ p: 2, borderRadius: 3 }}>
-              <Typography variant="h6" sx={{
-                fontWeight: 700,
-                mb: 2,
-                color: 'secondary.main',
-                borderBottom: '2px solid',
-                borderColor: 'secondary.main',
-                pb: 1
-              }}>
-                代码映射
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Paper variant="outlined" sx={{
-                    p: 1,
-                    height: 300,
-                    overflow: 'auto',
-                    backgroundColor: '#1e1e1e',
-                    borderRadius: 2
-                  }}>
-                    <Typography variant="subtitle2" sx={{ color: '#d4d4d4', mb: 1 }}>
-                      原始算法代码
-                    </Typography>
-                    <pre style={{
-                      fontSize: '0.8rem',
-                      color: '#d4d4d4',
-                      fontFamily: '"Fira Code", monospace',
-                      margin: 0
-                    }}>
-                      {algorithmDetails[selectedAlgo].parameters}
-                    </pre>
-                  </Paper>
-                </Grid>
-                <Grid item xs={6}>
-                  <Paper variant="outlined" sx={{
-                    p: 1,
-                    height: 300,
-                    overflow: 'auto',
-                    backgroundColor: '#1e1e1e',
-                    borderRadius: 2
-                  }}>
-                    <Typography variant="subtitle2" sx={{ color: '#d4d4d4', mb: 1 }}>
-                      加速器映射代码
-                    </Typography>
-                    <pre style={{
-                      fontSize: '0.8rem',
-                      color: '#d4d4d4',
-                      fontFamily: '"Fira Code", monospace',
-                      margin: 0
-                    }}>
-                      {`// ${selectedAlgo} 加速器优化代码\n// 矩阵化优化实现...`}
-                    </pre>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </Paper>
-          </Grid> */}
     </Box>
   );
 }
