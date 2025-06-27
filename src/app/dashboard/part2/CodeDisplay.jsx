@@ -1,4 +1,5 @@
-import { Box } from '@mui/material';
+import { Box, IconButton, Tooltip, LinearProgress, Typography } from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
 import { useState, useEffect, useRef } from 'react';
 import Prism from 'prismjs';
 
@@ -24,8 +25,10 @@ const customPrismStyles = `
   .editor-container {
     position: relative;
     width: 100%;
-    height: 100%;
-    min-height: 500px;
+    // 这边调整代码高度，实际上自动高度效果就挺好，似乎是在calculateEditorHeight已经调整了
+    // height: auto;
+    // max-height: 100%;
+    // min-height: 100px;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     background-color: #fbfbfb;
@@ -93,20 +96,89 @@ const customPrismStyles = `
     display: block;
     background: transparent;
   }
+
+  .save-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 4px;
+  }
+  
+  .progress-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 8px;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
 `;
+
+// 基础URL
+const BASE_URL = 'http://127.0.0.1:8000';
 
 const CodeDisplay = ({ 
   code, 
   onCodeChange,
   language = 'cpp',
-  animated = false
+  animated = false,
+  showSaveButton = false,
+  algorithm = 'bfs', // 当前选择的算法
+  dataset = 'nodataset', // 当前选择的数据集
+  onIRChange = () => {} // 当IR代码更新时的回调
 }) => {
   const [editedCode, setEditedCode] = useState(code);
   const [highlightedCode, setHighlightedCode] = useState('');
   const [linesDisplayed, setLinesDisplayed] = useState(0);
   const [codeLines, setCodeLines] = useState([]);
+  const [editorHeight, setEditorHeight] = useState('auto');
+  const [isCodeModified, setIsCodeModified] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
+  const originalCodeRef = useRef(code);
   const textareaRef = useRef(null);
   const highlightRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // 计算编辑器高度
+  const calculateEditorHeight = () => {
+    if (!editedCode || !containerRef.current) return;
+    
+    // 创建临时元素来测量文本高度
+    const tempDiv = document.createElement('div');
+    tempDiv.style.visibility = 'hidden';
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.fontFamily = '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace';
+    tempDiv.style.fontSize = '14px';
+    tempDiv.style.lineHeight = '1.6';
+    tempDiv.style.whiteSpace = 'pre';
+    tempDiv.style.padding = '16px';
+    tempDiv.style.width = `${containerRef.current.clientWidth - 32}px`; // 减去padding
+    tempDiv.textContent = editedCode;
+    document.body.appendChild(tempDiv);
+    
+    // 计算内容高度并添加一些额外空间
+    // const contentHeight = tempDiv.clientHeight + 32; // 加上padding
+    const contentHeight = tempDiv.clientHeight + 3; 
+
+    document.body.removeChild(tempDiv);
+    
+    // 设置最小和最大高度限制
+    // const minHeight = 80; // 最小高度
+    const maxHeight = 550; // 最大高度
+    // const calculatedHeight = Math.max(minHeight, Math.min(contentHeight, maxHeight));
+    const calculatedHeight = Math.min(contentHeight, maxHeight);
+
+    
+    setEditorHeight(`${calculatedHeight}px`);
+  };
 
   // 同步滚动
   const syncScroll = () => {
@@ -116,9 +188,22 @@ const CodeDisplay = ({
     }
   };
 
+  // 设置滚动事件监听
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.addEventListener('scroll', syncScroll);
+      return () => {
+        textarea.removeEventListener('scroll', syncScroll);
+      };
+    }
+  }, []);
+
   // 当传入的code变化时更新本地状态
   useEffect(() => {
     setEditedCode(code);
+    originalCodeRef.current = code;
+    setIsCodeModified(false);
     
     // 如果有动画效果，初始时重置已显示的行数
     if (animated) {
@@ -137,17 +222,6 @@ const CodeDisplay = ({
     return () => {
       document.head.removeChild(style);
     };
-  }, []);
-
-  // 设置滚动事件监听
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.addEventListener('scroll', syncScroll);
-      return () => {
-        textarea.removeEventListener('scroll', syncScroll);
-      };
-    }
   }, []);
 
   // 动画效果：逐行显示代码
@@ -173,7 +247,7 @@ const CodeDisplay = ({
     return () => clearInterval(interval);
   }, [animated, codeLines]);
 
-  // 当代码变化时，更新高亮代码
+  // 当代码变化时，计算高度和更新高亮代码
   useEffect(() => {
     try {
       // 使用语言关键字映射到Prism支持的语言
@@ -202,6 +276,9 @@ const CodeDisplay = ({
       
       setHighlightedCode(highlighted);
       
+      // 计算编辑器高度
+      calculateEditorHeight();
+      
       // 代码更新后确保滚动同步
       setTimeout(syncScroll, 0);
     } catch (error) {
@@ -210,16 +287,195 @@ const CodeDisplay = ({
     }
   }, [editedCode, language, animated, codeLines, linesDisplayed]);
 
+  // 窗口大小变化时重新计算高度
+  useEffect(() => {
+    const handleResize = () => calculateEditorHeight();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // 检查代码是否被修改
+  useEffect(() => {
+    // 仅当编辑后的代码与原始代码不同时，设置修改状态为true
+    setIsCodeModified(editedCode !== originalCodeRef.current);
+  }, [editedCode]);
+
   const handleCodeChange = (e) => {
-    setEditedCode(e.target.value);
+    const newCode = e.target.value;
+    setEditedCode(newCode);
+    
     if (onCodeChange) {
-      onCodeChange(e.target.value);
+      onCodeChange(newCode);
     }
   };
 
+  // 保存代码函数
+  const handleSaveCode = async () => {
+    console.log('保存代码:', editedCode);
+    // TODO 保存代码相关
+    
+    try {
+      setIsSaving(true);
+      setProgressMessage('正在保存代码...');
+      setProgress(10);
+
+      // 步骤1: 将修改后的CGA代码写入后端
+      const writeUrl = `${BASE_URL}/part3/write/1/${algorithm}/`;
+      console.log(`调用API: ${writeUrl}`);
+      
+      const writeResponse = await fetch(writeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: editedCode }),
+      });
+
+      if (!writeResponse.ok) {
+        throw new Error(`保存代码失败: ${writeResponse.statusText}`);
+      }
+
+      console.log('代码保存成功，准备执行');
+      setProgress(20);
+      setProgressMessage('代码保存成功，正在验证...');
+      
+      // 步骤2: 执行代码 - 处理流式响应
+      const actualDataset = dataset || 'nodataset';
+      const executeUrl = `${BASE_URL}/part3/execute/1/${algorithm}/${actualDataset}/`;
+      console.log(`调用API: ${executeUrl}`);
+      
+      // 获取响应但不立即等待其完成
+      const executeResponse = await fetch(executeUrl);
+      
+      if (!executeResponse.ok) {
+        throw new Error(`执行代码失败: ${executeResponse.statusText}`);
+      }
+
+      // 获取响应的可读流
+      const reader = executeResponse.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let executionOutput = '';
+      
+      // 跟踪执行进度
+      setProgress(30);
+      let progressValue = 30;
+      
+      // 处理流式数据
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log("流式响应接收完毕");
+          break;
+        }
+        
+        // 解码并添加到输出
+        const chunk = decoder.decode(value, { stream: true });
+        executionOutput += chunk;
+        
+        // 更新进度消息，显示最新的输出行
+        const lines = executionOutput.split('\n');
+        if (lines.length > 0) {
+          const lastLine = lines[lines.length - 1].trim();
+          if (lastLine) {
+            setProgressMessage(`执行中: ${lastLine}`);
+          }
+        }
+        
+        // 逐渐更新进度条
+        progressValue = Math.min(85, progressValue + 4); // 从30%最多更新到85%
+        setProgress(progressValue);
+      }
+      
+      console.log('代码执行完成，准备获取结果');
+      setProgress(90);
+      
+      // 步骤3: 获取执行结果
+      const resultUrl = `${BASE_URL}/part3/result/1/${algorithm}/`;
+      console.log(`调用API: ${resultUrl}`);
+      
+      const resultResponse = await fetch(resultUrl);
+      
+      if (!resultResponse.ok) {
+        throw new Error(`获取结果失败: ${resultResponse.statusText}`);
+      }
+
+      // 解析结果数据
+      const resultData = await resultResponse.json();
+      console.log('获取结果成功:', resultData);
+      
+      // 提取IR代码和硬件指令
+      const graphIR = resultData.data.GraphIR ? resultData.data.GraphIR.join('\n') : null;
+      const matrixIR = resultData.data.MatrixIR ? resultData.data.MatrixIR.join('\n') : null;
+      const hardwareInstructions = resultData.data.asm ? resultData.data.asm.join('\n') : null;
+      console.log('graphIR', graphIR);
+      console.log('matrixIR', matrixIR);
+      console.log('hardwareInstructions', hardwareInstructions);
+      
+      // 通知父组件更新IR代码
+      onIRChange({
+        graphIR,
+        matrixIR,
+        hardwareInstructions
+      });
+
+      // 完成进度条
+      setProgress(100);
+      setProgressMessage('验证完成!');
+      
+      // 3秒后隐藏进度条
+      setTimeout(() => {
+        setIsSaving(false);
+        setProgress(0);
+        setProgressMessage('');
+      }, 3000);
+      
+      // 更新原始代码引用，使得保存按钮消失
+      originalCodeRef.current = editedCode;
+      setIsCodeModified(false);
+      
+    } catch (error) {
+      console.error('处理请求时出错:', error);
+      setProgressMessage(`错误: ${error.message}`);
+      
+      // 出错时也隐藏进度条，但稍晚一些
+      setTimeout(() => {
+        setIsSaving(false);
+        setProgress(0);
+        setProgressMessage('');
+      }, 5000);
+    }
+  };
+
+  // 渲染保存按钮的条件：需要显示保存按钮 AND 代码已被修改
+  const shouldShowSaveButton = showSaveButton && isCodeModified && !isSaving;
+
   return (
-    <Box sx={{ height: '100%', minHeight: '500px' }}>
-      <div className="editor-container">
+    <Box sx={{ height: editorHeight, minHeight: '100px', maxHeight: '550px' }}>
+      <div className="editor-container" ref={containerRef} style={{ height: editorHeight }}>
+        {shouldShowSaveButton && (
+          <Tooltip title="保存代码">
+            <IconButton 
+              onClick={handleSaveCode} 
+              size="small" 
+              color="primary"
+              className="save-button"
+              disabled={isSaving}
+            >
+              <SaveIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+        
+        {isSaving && (
+          <div className="progress-container">
+            <Typography variant="body2" color="primary">
+              {progressMessage}
+            </Typography>
+            <LinearProgress variant="determinate" value={progress} />
+          </div>
+        )}
+        
         <div className="editor-highlight" ref={highlightRef}>
           <pre>
             <code 
@@ -234,6 +490,7 @@ const CodeDisplay = ({
           onChange={handleCodeChange}
           className="editor-textarea"
           spellCheck="false"
+          disabled={isSaving}
         />
       </div>
     </Box>

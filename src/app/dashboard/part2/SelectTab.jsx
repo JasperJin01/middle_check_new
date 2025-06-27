@@ -19,6 +19,13 @@ import {
 import { codeData } from './codeData';
 import CodeDisplay from './CodeDisplay';
 
+// 添加存储更新后的IR代码
+const updatedIRCodes = {
+  'graph-ir': null,
+  'matrix-ir': null,
+  'hardware-instruction': null
+};
+
 // TabPanel组件（内部使用）
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -181,8 +188,23 @@ const SelectTab = ({
     }
   };
 
-  // 获取要显示的代码内容
+  // 处理IR代码更新
+  const handleIRUpdate = (irData) => {
+    console.log('IR代码已更新:', irData);
+    
+    // 更新存储的IR代码
+    if (irData.graphIR) updatedIRCodes['graph-ir'] = irData.graphIR;
+    if (irData.matrixIR) updatedIRCodes['matrix-ir'] = irData.matrixIR;
+    if (irData.hardwareInstructions) updatedIRCodes['hardware-instruction'] = irData.hardwareInstructions;
+  };
+
+  // 获取要显示的代码内容，优先使用更新后的IR代码
   const getCodeContent = (codeType, algorithm = selectedAlgorithm) => {
+    // 检查是否存在更新后的IR代码
+    if (['graph-ir', 'matrix-ir', 'hardware-instruction'].includes(codeType) && updatedIRCodes[codeType]) {
+      return updatedIRCodes[codeType];
+    }
+
     // 特殊处理模板代码
     if (codeType === 'device-cga' && algorithm === 'custom') {
       // 如果存在已编辑的模板代码，返回它
@@ -308,6 +330,10 @@ const SelectTab = ({
                 onCodeChange={(newCode) => handleCodeChange(newCode, 'device-cga')}
                 language="python"
                 animated={cgaAnimationEnabled}
+                showSaveButton={true}
+                algorithm={selectedAlgorithm}
+                dataset={selectedDataset}
+                onIRChange={handleIRUpdate}
               />
             </TabPanel>
           )}
