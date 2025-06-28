@@ -588,7 +588,7 @@ export default function Page() {
                       {value.toFixed(3)}<br/>
                       {/* 加一个可以修改高度的换行 */}
                       <Box sx={{ height: 12 }} />
-                      <span style={{color: '#CC556A', fontWeight: 'bold'}}>加速比: {speedUp.toFixed(3)}x</span>
+                      <span style={{color: '#CC556A', fontWeight: 'bold'}}>加速比: {speedUp.toFixed(3)}</span>
                     </span>, 
                     name
                   ];

@@ -418,6 +418,7 @@ const Page = () => {
 
                     {/* 选项卡 */}
                     <SelectTab 
+                      key="middle-panel"
                       activeTab={activeTab} 
                       selectedAlgorithm={selectedAlgorithm}
                       panelType="middle"
@@ -467,6 +468,7 @@ const Page = () => {
 
                     {/* 选项卡 */}
                     <SelectTab 
+                      key="right-panel"
                       activeTab={activeTab} 
                       selectedAlgorithm={selectedAlgorithm}
                       selectedDataset={selectedDataset}

@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
-const config = {};
+const config = {
+  output: 'standalone',
+  swcMinify: true,
+  reactStrictMode: true,
+};
 
 export default config;
