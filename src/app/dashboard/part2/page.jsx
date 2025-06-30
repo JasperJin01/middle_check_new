@@ -14,7 +14,8 @@ import {
   Fab,
   Zoom,
   Tabs,
-  Tab
+  Tab,
+  LinearProgress
 } from '@mui/material';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -124,6 +125,20 @@ const Page = () => {
   // 使用抽离出来的handleRun hook
   const { handleRun, isRunning, results, setResults } = useHandleRun(algorithmMappings);
 
+  // 初始化时设置默认算法和数据集
+  useEffect(() => {
+    // 设置默认算法为bfs
+    const defaultAlgorithm = 'bfs';
+    setSelectedAlgorithm(defaultAlgorithm);
+    
+    // 设置默认数据集为算法的第一个可用数据集
+    if (algorithmMappings[defaultAlgorithm] && 
+        algorithmMappings[defaultAlgorithm].datasets && 
+        algorithmMappings[defaultAlgorithm].datasets.length > 0) {
+      setSelectedDataset(algorithmMappings[defaultAlgorithm].datasets[0]);
+    }
+  }, []);
+  
   // 监听框架选择变化，更新selectedFramework
   useEffect(() => {
     setSelectedFramework(frameworkSelection.framework);
@@ -138,10 +153,19 @@ const Page = () => {
     
     // 更新可用的数据集
     if(newAlgorithm !== 'custom' && newAlgorithm !== 'framework' && algorithmMappings[newAlgorithm]) {
-      // 如果当前选择的数据集不在新算法的可用数据集列表中，清空选择
-      if(selectedDataset && !algorithmMappings[newAlgorithm].datasets.includes(selectedDataset)) {
-        setSelectedDataset('');
-      }
+      const availableDatasets = algorithmMappings[newAlgorithm].datasets;
+      setSelectedDataset(availableDatasets[0]);
+      // 如果当前选择的数据集不在新算法的可用数据集列表中，选择第一个数据集
+      // if (availableDatasets && availableDatasets.length > 0) {
+      //   if (!availableDatasets.includes(selectedDataset)) {
+      //     setSelectedDataset(availableDatasets[0]);
+      //   }
+      // } else {
+      //   setSelectedDataset('');
+      // }
+    } else {
+      // 对于自定义或框架生成，清空数据集选择
+      setSelectedDataset('');
     }
   };
 
@@ -269,7 +293,7 @@ const Page = () => {
     
     // 生成图表数据
     const chartData = [{
-      name: '当前值',
+      name: selectedDataset,
       performance: performanceValue,
       ptarget: ptargetValue,
       consumption: consumptionValue,
@@ -281,6 +305,12 @@ const Page = () => {
 
   // 处理流程图中模块的点击事件
   const handleModuleClick = (module) => {
+    // 除了"exe执行"外的其他按钮点击时，如果界面在底部，则滑回顶部
+    if (module !== 'exe执行' && showBottomPanels) {
+      setShowBottomPanels(false);
+      return;
+    }
+
     switch (module) {
       case '统一编程框架CGA':
         setShowMiddlePanel(true);
@@ -542,8 +572,29 @@ const Page = () => {
                     fontSize: '0.8rem',
                   }} 
                   ref={resultsBoxRef}>
-                    {/* 这里放置日志内容 */}
-                    <pre>{results.terminalOutput || '日志内容将在这里显示...'}</pre>
+                    {/* 这里放置日志内容，添加特定行的颜色高亮 */}
+                    <pre>
+                      {results.terminalOutput 
+                        ? results.terminalOutput.split('\n').map((line, index) => {
+                            // 匹配成功和通过的行，添加绿色
+                            if (line.includes('[       OK ]') || 
+                                line.includes('[  PASSED  ]') ||
+                                line.includes('freq=1000 MHz')) {
+                              return (
+                                <div key={index} style={{ color: '#67ad5b' /* 绿色 */ }}>
+                                  {line}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div key={index}>
+                                {line}
+                              </div>
+                            );
+                          })
+                        : '日志内容将在这里显示...'
+                      }
+                    </pre>
                   </Box>
                 </Paper>
               </Grid>
@@ -571,27 +622,56 @@ const Page = () => {
                     p: 2,
                     borderRadius: 1,
                   }}>
-                    {/* 性能图表 */}
-                    {chartData.length > 0 ? (
+                    {/* 加载进度条 */}
+                    {isRunning ? (
+                      <Box sx={{ width: '100%', mb: 3 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          执行中，请稍候...
+                        </Typography>
+                        <LinearProgress color="primary" />
+                      </Box>
+                    ) : (
+                    /* 性能图表 */
+                    chartData.length > 0 ? (
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
-                        <Tabs
-                          value={chartMetric}
-                          onChange={(e, v) => setChartMetric(v)}
-                          sx={{ mb: 3, alignSelf: 'flex-start' }}
-                        >
-                          <Tab label="性能" value="performance" style={{ fontWeight: 'bold', color: 'black' }} />
-                          <Tab label="性能功耗比" value="consumption" style={{ fontWeight: 'bold', color: 'black' }} />
-                        </Tabs>
-                        {chartMetric === 'performance' && (
+                        {/* 只有对特定算法显示选项卡 */}
+                        {['kclique', 'ppr', 'gcn'].includes(selectedAlgorithm) ? (
+                          <Tabs
+                            value={chartMetric}
+                            onChange={(e, v) => setChartMetric(v)}
+                            sx={{ mb: 3, alignSelf: 'flex-start' }}
+                          >
+                            <Tab label="性能" value="performance" style={{ fontWeight: 'bold', color: 'black' }} />
+                            <Tab label="性能功耗比" value="consumption" style={{ fontWeight: 'bold', color: 'black' }} />
+                          </Tabs>
+                        ) : (
+                          // 对其他算法，强制设置为性能选项卡，不显示切换选项
+                          <Box sx={{ mb: 3, alignSelf: 'flex-start' }}>
+                            <Typography variant="button" 
+                              sx={{ 
+                                fontWeight: 'bold', 
+                                color: 'black', 
+                                borderBottom: '2px solid #1976d2',
+                                pb: 0.5
+                              }}
+                            >
+                              性能
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {/* 只显示相应的图表 */}
+                        {((['kclique', 'ppr', 'gcn'].includes(selectedAlgorithm) && chartMetric === 'performance') || 
+                          (!['kclique', 'ppr', 'gcn'].includes(selectedAlgorithm))) ? (
                           <BarChart
                             data={chartData}
-                            margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
-                            width={550}
-                            height={350}
+                            margin={{ top: 50, right: 20, left: 20, bottom: 20 }}
+                            width={480}
+                            height={380}
                           >
                             <text
                               x="50%"
-                              y={20}
+                              y={15}
                               textAnchor="middle"
                               style={{ fontSize: '16px', fontWeight: 'bold' }}
                             >
@@ -604,7 +684,7 @@ const Page = () => {
                                 position: 'insideLeft'
                               }}
                             />
-                            <XAxis stroke="#000000" />
+                            <XAxis dataKey="name"/>
                             <Legend
                               verticalAlign="bottom"
                               height={36}
@@ -632,17 +712,16 @@ const Page = () => {
                               }}
                             />
                           </BarChart>
-                        )}
-                        {chartMetric === 'consumption' && (
+                        ) : (
                           <BarChart
                             data={chartData}
-                            margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
-                            width={550}
-                            height={350}
+                            margin={{ top: 50, right: 20, left: 20, bottom: 20 }}
+                            width={480}
+                            height={380}
                           >
                             <text
                               x="50%"
-                              y={20}
+                              y={15}
                               textAnchor="middle"
                               style={{ fontSize: '16px', fontWeight: 'bold' }}
                             >
@@ -655,7 +734,7 @@ const Page = () => {
                                 position: 'insideLeft'
                               }}
                             />
-                            <XAxis dataKey={selectedDataset} />
+                            <XAxis dataKey="name" />
                             <Legend
                               verticalAlign="bottom"
                               height={36}
@@ -689,7 +768,7 @@ const Page = () => {
                       <Typography variant="body1">
                         性能结果将在执行完成后显示...
                       </Typography>
-                    )}
+                    ))}
                   </Box>
                 </Paper>
               </Grid>
