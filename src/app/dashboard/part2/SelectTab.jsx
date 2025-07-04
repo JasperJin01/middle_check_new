@@ -55,7 +55,8 @@ const SelectTab = ({
   frameworkSelection = { framework: '', algorithm: '' },
   setFrameworkSelection = () => {},
   visibleIRTabs = [],
-  cgaAnimationEnabled = false
+  cgaAnimationEnabled = false,
+  onSave = () => {}
 }) => {
   // 为每个面板类型创建独立的状态标识符
   const panelId = useMemo(() => `${panelType}-panel`, [panelType]);
@@ -324,6 +325,7 @@ const SelectTab = ({
             algorithm={selectedAlgorithm}
             dataset={selectedDataset}
             onIRChange={handleIRUpdate}
+            onSave={onSave}
           />
         );
         

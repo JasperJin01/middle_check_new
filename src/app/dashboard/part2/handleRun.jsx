@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { codeData } from './codeData';
 
 // 示例代码，在网络请求失败时使用
 const sampleCodes = {
@@ -34,7 +35,7 @@ const sampleCodes = {
 
 // 导入请求工具
 const request = {
-  BASE_URL: 'http://127.0.0.1:8000' // 这里需要替换为实际的后端URL
+  BASE_URL: 'http://10.11.74.113:8000' // 这里需要替换为实际的后端URL
 };
 
 // 创建handleRun函数
@@ -47,7 +48,7 @@ const useHandleRun = (algorithmMappings) => {
     return algorithmMappings[algo]?.url || algo;
   };
 
-  const handleRun = async (selectedAlgorithm, selectedDataset, selectedFramework, showBottomPanels, setShowBottomPanels, generateChartData) => {
+  const handleRun = async (selectedAlgorithm, selectedDataset, selectedFramework, showBottomPanels, setShowBottomPanels, generateChartData, editedCodes = {}) => {
     if (isRunning || selectedAlgorithm === 'custom' || selectedDataset === '') {
       console.log('当前程序正在运行，或未选择算法或数据集')
       return;
@@ -55,12 +56,69 @@ const useHandleRun = (algorithmMappings) => {
     
     // 显示底部面板
     setShowBottomPanels(true);
-
+    
     setIsRunning(true);
     setResults({ terminalOutput: 'Connecting to server...\n' });
 
     try {
-      const eventSource = new EventSource(`${request.BASE_URL}/part3/moni/1/${getAlgorithmUrl(selectedAlgorithm)}/${selectedDataset}/`);
+      // 检查CGA代码是否被编辑过
+      const cgaCode = editedCodes['device-cga'];
+      const defaultCGACode = codeData['device-cga']?.[selectedAlgorithm];
+      
+      // 如果没有编辑过的代码，则写入默认代码
+      if (!cgaCode && defaultCGACode) {
+        console.log('使用默认CGA代码');
+        const algorithmUrl = algorithmMappings[selectedAlgorithm]?.url || selectedAlgorithm;
+        const writeUrl = `${request.BASE_URL}/part3/write/1/${algorithmUrl}/`;
+        console.log(`调用API: ${writeUrl}`);
+        
+        const writeResponse = await fetch(writeUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ code: defaultCGACode }),
+        });
+
+        if (!writeResponse.ok) {
+          throw new Error(`写入默认代码失败: ${writeResponse.statusText}`);
+        }
+        console.log('默认代码写入成功');
+      }
+
+      // 检查并提取参数值
+      let paramValue = null;
+      if (selectedAlgorithm === 'ppr' || selectedAlgorithm === 'kcore') {
+        // 使用编辑过的代码或默认代码
+        const codeToCheck = editedCodes['device-cga'] || codeData['device-cga']?.[selectedAlgorithm];
+        if (codeToCheck) {
+          if (selectedAlgorithm === 'ppr') {
+            const maxiterRegex = /self\.CGAprop\.maxiter\s*=\s*(\d+)/;
+            const match = codeToCheck.match(maxiterRegex);
+            if (match && match[1]) {
+              paramValue = match[1];
+            }
+          } else if (selectedAlgorithm === 'kcore') {
+            const kRegex = /self\.K\s*:\s*int\s*=\s*(\d+)/;
+            const match = codeToCheck.match(kRegex);
+            if (match && match[1]) {
+              paramValue = match[1];
+            }
+          }
+        }
+      }
+
+      // 构建URL，根据算法类型添加不同的参数
+      let apiUrl = `${request.BASE_URL}/part3/moni/1/${getAlgorithmUrl(selectedAlgorithm)}/${selectedDataset}/`;
+      // 这里的url不要改！
+      if (selectedAlgorithm === 'ppr' && paramValue) {
+        apiUrl = `${request.BASE_URL}/part3editarg/moni/1/${getAlgorithmUrl(selectedAlgorithm)}/${selectedDataset}/${paramValue}/`;
+      } else if (selectedAlgorithm === 'kcore' && paramValue) {
+        apiUrl = `${request.BASE_URL}/part3editarg/moni/1/${getAlgorithmUrl(selectedAlgorithm)}/${selectedDataset}/${paramValue}/`;
+      }
+      
+      console.log('API URL:', apiUrl);
+      const eventSource = new EventSource(apiUrl);
 
       eventSource.onmessage = async (event) => {
         if (event.data === '[done]') {
@@ -83,8 +141,11 @@ const useHandleRun = (algorithmMappings) => {
             hardwareInstructions: ''
           }));
           
-          // 生成图表数据用于显示
-          generateChartData();
+          // 执行完成后才生成图表数据
+          if (typeof generateChartData === 'function') {
+            generateChartData();
+          }
+          
           setIsRunning(false);
 
         } else if (event.data === '[error]') {

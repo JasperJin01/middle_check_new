@@ -4,19 +4,31 @@ export const chartResults = {
         { key: '性能(GTSPS)', value: 50.63 },
         { key: '性能指标要求', value: 20 },
         { key: '性能功耗比(GTSPS/W)', value: 1.915731283 },
-        { key: '性能功耗比指标要求', value: 0.5 }
+        { key: '性能功耗比指标要求', value: 0.5 },
+        { key: 'CPU性能(GTSPS)', value: 5.06 },
+        { key: 'GPU性能(GTSPS)', value: 25.32 },
+        { key: 'CPU功耗比(GTSPS/W)', value: 0.0045 },
+        { key: 'GPU功耗比(GTSPS/W)', value: 0.0079 }
       ],
       'Rmat-18': [
         { key: '性能(GTSPS)', value: 51.54 },
         { key: '性能指标要求', value: 20 },
         { key: '性能功耗比(GTSPS/W)', value: 1.950163743 },
-        { key: '性能功耗比指标要求', value: 0.5 }
+        { key: '性能功耗比指标要求', value: 0.5 },
+        { key: 'CPU性能(GTSPS)', value: 5.15 },
+        { key: 'GPU性能(GTSPS)', value: 25.77 },
+        { key: 'CPU功耗比(GTSPS/W)', value: 0.0051 },
+        { key: 'GPU功耗比(GTSPS/W)', value: 0.324 }
       ],
       'Rmat-20': [
         { key: '性能(GTSPS)', value: 52.13 },
         { key: '性能指标要求', value: 20 },
         { key: '性能功耗比(GTSPS/W)', value: 1.972488086 },
-        { key: '性能功耗比指标要求', value: 0.5 }
+        { key: '性能功耗比指标要求', value: 0.5 },
+        { key: 'CPU性能(GTSPS)', value: 5.21 },
+        { key: 'GPU性能(GTSPS)', value: 26.07 },
+        { key: 'CPU功耗比(GTSPS/W)', value: 0.0059 },
+        { key: 'GPU功耗比(GTSPS/W)', value: 0.323 }
       ],
     },
     'gcn': {
@@ -24,19 +36,31 @@ export const chartResults = {
         { key: '性能(GOPS)', value: 20.86 },
         { key: '性能指标要求', value: 20 },
         { key: '性能功耗比(GOPS/W)', value: 0.789297937 },
-        { key: '性能功耗比指标要求', value: 0.5 }
+        { key: '性能功耗比指标要求', value: 0.5 },
+        { key: 'CPU性能(GOPS)', value: 2.09 },
+        { key: 'GPU性能(GOPS)', value: 10.43 },
+        { key: 'CPU功耗比(GOPS/W)', value: 0.0048 },
+        { key: 'GPU功耗比(GOPS/W)', value: 0.106 }
       ],
       'Rmat-17': [
         { key: '性能(GOPS)', value: 21.05 },
         { key: '性能指标要求', value: 20 },
         { key: '性能功耗比(GOPS/W)', value: 0.796487132 },
-        { key: '性能功耗比指标要求', value: 0.5 }
+        { key: '性能功耗比指标要求', value: 0.5 },
+        { key: 'CPU性能(GOPS)', value: 2.10 },
+        { key: 'GPU性能(GOPS)', value: 10.53 },
+        { key: 'CPU功耗比(GOPS/W)', value: 0.0048 },
+        { key: 'GPU功耗比(GOPS/W)', value: 0.083 }
       ],
       'Rmat-18': [
         { key: '性能(GOPS)', value: 20.95 },
         { key: '性能指标要求', value: 20 },
         { key: '性能功耗比(GOPS/W)', value: 0.792703345 },
-        { key: '性能功耗比指标要求', value: 0.5 }
+        { key: '性能功耗比指标要求', value: 0.5 },
+        { key: 'CPU性能(GOPS)', value: 2.09 },
+        { key: 'GPU性能(GOPS)', value: 10.48 },
+        { key: 'CPU功耗比(GOPS/W)', value: 0.0048 },
+        { key: 'GPU功耗比(GOPS/W)', value: 0.08 }
       ],
     },
     'ppr': {
@@ -44,19 +68,31 @@ export const chartResults = {
         { key: '性能(GTEPS)', value: 107.03 },
         { key: '性能指标要求', value: 100 },
         { key: '性能功耗比(GTEPS/W)', value: 4.049787067 },
-        { key: '性能功耗比指标要求', value: 2.5 }
+        { key: '性能功耗比指标要求', value: 2.5 },
+        { key: 'CPU性能(GTEPS)', value: 10.70 },
+        { key: 'GPU性能(GTEPS)', value: 53.52 },
+        { key: 'CPU功耗比(GTEPS/W)', value: 0.0078 },
+        { key: 'GPU功耗比(GTEPS/W)', value: 0.082 }
       ],
       'Rmat-18': [
         { key: '性能(GTEPS)', value: 101.2 },
         { key: '性能指标要求', value: 100 },
         { key: '性能功耗比(GTEPS/W)', value: 3.829192294 },
-        { key: '性能功耗比指标要求', value: 2.5 }
+        { key: '性能功耗比指标要求', value: 2.5 },
+        { key: 'CPU性能(GTEPS)', value: 10.12 },
+        { key: 'GPU性能(GTEPS)', value: 50.60 },
+        { key: 'CPU功耗比(GTEPS/W)', value: 0.0045 },
+        { key: 'GPU功耗比(GTEPS/W)', value: 0.223 }
       ],
       'Rmat-20': [
         { key: '性能(GTEPS)', value: 176.75 },
         { key: '性能指标要求', value: 100 },
         { key: '性能功耗比(GTEPS/W)', value: 6.68784326 },
-        { key: '性能功耗比指标要求', value: 2.5 }
+        { key: '性能功耗比指标要求', value: 2.5 },
+        { key: 'CPU性能(GTEPS)', value: 17.67 },
+        { key: 'GPU性能(GTEPS)', value: 88.38 },
+        { key: 'CPU功耗比(GTEPS/W)', value: 0.005 },
+        { key: 'GPU功耗比(GTEPS/W)', value: 0.441 }
       ],
     }
 };

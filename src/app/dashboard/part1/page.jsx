@@ -80,6 +80,9 @@ export default function Page() {
     
     const cpu = datasetEntry["CPU-Time(s)"];
     const accelerator = baseData["ACC-Time(s)"];
+    const throughput = baseData["GTSPS"];
+    const speedUp = cpu / accelerator;
+    const cpuThroughput = throughput / speedUp;
   
     return {
       combinedKey: `${baseData.Algorithm}-${baseData.Dataset}`,
@@ -87,12 +90,11 @@ export default function Page() {
       dataset: baseData.Dataset,
       nodes: baseData.Vertices,
       edges: baseData.Edges,
-      // cpu: baseData['CPU-Time(s)'],
       cpu,
       accelerator,
-      speedUp: cpu / accelerator,
-
-      throughput: baseData["GTSPS"]
+      speedUp,
+      throughput,
+      cpuThroughput
     };
   };
 
@@ -116,22 +118,27 @@ export default function Page() {
     setRunning(true);
   
     try {
-      // 运行“全部数据集”，使用预设数据
+      // 运行"全部数据集"，使用预设数据
       if (selectedDataset === allDatasetsOption) {
         setLogs(prev => [...prev, '正在加载全部数据集...']);
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        const allResults = PERFORMANCE_DATA[selectedAlgo].map(data => ({
-          combinedKey: `${data.Algorithm}-${data.Dataset}`,
-          algorithm: data.Algorithm,
-          dataset: data.Dataset,
-          nodes: data.Vertices,
-          edges: data.Edges,
-          cpu: data['CPU-Time(s)'],
-          accelerator: data['ACC-Time(s)'],
-          speedUp: data['Speedup'],
-          throughput: data['GTSPS']
-        }));
+        const allResults = PERFORMANCE_DATA[selectedAlgo].map(data => {
+          const speedUp = data['CPU-Time(s)'] / data['ACC-Time(s)'];
+          const cpuThroughput = data['GTSPS'] / speedUp;
+          return {
+            combinedKey: `${data.Algorithm}-${data.Dataset}`,
+            algorithm: data.Algorithm,
+            dataset: data.Dataset,
+            nodes: data.Vertices,
+            edges: data.Edges,
+            cpu: data['CPU-Time(s)'],
+            accelerator: data['ACC-Time(s)'],
+            speedUp: data['Speedup'],
+            throughput: data['GTSPS'],
+            cpuThroughput
+          };
+        });
   
         setPerformanceData(allResults);
         setLogs(prev => [...prev, '全部数据集加载完成']);
@@ -461,12 +468,17 @@ export default function Page() {
                 borderRadius: 2,
                 p: 1.5,
                 '& > div': {
-                  color: '#4caf50',
+                  color: '#fff',
                   lineHeight: 1.6,
                   borderBottom: '1px solid rgba(255,255,255,0.1)',
                   py: 0.5,
                   '& .highlight': {
-                    color: '#ff5252'
+                    // color: '#4caf50',
+                    fontWeight: 'bold',
+                    // backgroundColor: 'rgba(255, 255, 0, 0.2)',
+                    backgroundColor: 'rgba(126, 205, 136, 0.5)',
+                    padding: '0 4px',
+                    borderRadius: '2px'
                   }
                 }
               }} ref={logBoxRef}>
@@ -528,9 +540,10 @@ export default function Page() {
                         <TableCell>节点数</TableCell>
                         <TableCell>边数</TableCell>
                         <TableCell>CPU时间(s)</TableCell>
+                        <TableCell>CPU吞吐量</TableCell>
                         <TableCell>加速器时间(s)</TableCell>
                         <TableCell>加速比</TableCell>
-                        <TableCell>吞吐量</TableCell>
+                        <TableCell>加速器吞吐量</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -541,6 +554,7 @@ export default function Page() {
                           <TableCell>{row.nodes.toLocaleString()}</TableCell>
                           <TableCell>{row.edges.toLocaleString()}</TableCell>
                           <TableCell>{row.cpu.toFixed(3)}</TableCell>
+                          <TableCell>{`${row.cpuThroughput.toFixed(3)} ${getThroughputUnit(row.algorithm)}`}</TableCell>
                           <TableCell>{row.accelerator.toFixed(3)}</TableCell>
                           <TableCell>{row.speedUp.toFixed(3)}</TableCell>
                           <TableCell>{`${row.throughput.toFixed(3)} ${getThroughputUnit(row.algorithm)}`}</TableCell>
@@ -602,7 +616,7 @@ export default function Page() {
                 return label;
               }}
             />
-            <Legend />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} />
 
             {chartMetric === 'time' && (
                 <>
@@ -611,12 +625,14 @@ export default function Page() {
                         fill="#7f58af"
                         name="CPU（Intel Xeon Gold 6338）时间"
                         barSize={50}
+                        style={{ marginRight: '20px' }}
                     />
                     <Bar
                         dataKey="accelerator"
                         fill="#64b5f6"
                         name="加速器时间"
                         barSize={50}
+                        style={{ marginLeft: '20px' }}
                     />
                 </>
             )}
@@ -624,9 +640,17 @@ export default function Page() {
             {chartMetric === 'throughput' && (
               <>
                 <Bar
+                  dataKey="cpuThroughput"
+                  fill="#9e9e9e"
+                  name="CPU吞吐量"
+                  barSize={50}
+                  onMouseEnter={() => setShowReferenceLine(true)}
+                  onMouseLeave={() => setShowReferenceLine(false)}
+                />
+                <Bar
                   dataKey="throughput"
                   fill="#26a69a"
-                  name="吞吐量"
+                  name="加速器吞吐量"
                   barSize={50}
                   onMouseEnter={() => setShowReferenceLine(true)}
                   onMouseLeave={() => setShowReferenceLine(false)}

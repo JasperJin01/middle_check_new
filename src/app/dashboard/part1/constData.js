@@ -14,7 +14,7 @@ export const PERFORMANCE_DATA = {
     Dataset: 'Rmat-16',
     Vertices: Math.pow(2, 16),
     Edges: Math.pow(2, 20),
-    'CPU-Time(s)': 0.182,
+    'CPU-Time(s)': 0.0365,
     'ACC-Time(s)': 0.004,
     'Speedup': 0.182 / 0.004,  // 45.5
     'GTSPS': 7.47603
@@ -24,7 +24,7 @@ export const PERFORMANCE_DATA = {
     Dataset: 'Rmat-17',
     Vertices: Math.pow(2, 17),
     Edges: Math.pow(2, 21),
-    'CPU-Time(s)': 0.394,
+    'CPU-Time(s)': 0.0594,
     'ACC-Time(s)': 0.009,
     'Speedup': 0.394 / 0.009,  // ~43.78
     'GTSPS': 6.65543
@@ -34,7 +34,7 @@ export const PERFORMANCE_DATA = {
     Dataset: 'Rmat-18',
     Vertices: Math.pow(2, 18),
     Edges: Math.pow(2, 21),
-    'CPU-Time(s)': 0.531,
+    'CPU-Time(s)': 0.0664,
     'ACC-Time(s)': 0.009,
     'Speedup': 0.531 / 0.009,  // 59
     'GTSPS': 6.617
@@ -44,7 +44,7 @@ export const PERFORMANCE_DATA = {
     Dataset: 'Rmat-19',
     Vertices: Math.pow(2, 19),
     Edges: Math.pow(2, 22),
-    'CPU-Time(s)': 2.16,
+    'CPU-Time(s)': 0.212,
     'ACC-Time(s)': 0.036,
     'Speedup': 2.16 / 0.036,  // 60
     'GTSPS': 6.102
@@ -54,7 +54,7 @@ export const PERFORMANCE_DATA = {
     Dataset: 'Rmat-20',
     Vertices: Math.pow(2, 20),
     Edges: Math.pow(2, 23),
-    'CPU-Time(s)': 3.84,
+    'CPU-Time(s)': 0.394,
     'ACC-Time(s)': 0.034,
     'Speedup': 3.84 / 0.034,  // ~112.94
     'GTSPS': 6.141

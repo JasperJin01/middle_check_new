@@ -19,49 +19,28 @@ import {
 } from '@mui/material';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import { BarChart, Bar, XAxis, YAxis, Legend } from 'recharts';
 
 import SelectTab from './SelectTab';
 import { codeData } from './codeData';
 import FlowDiagram from './FlowDiagram';
 import useHandleRun from './handleRun';
 import { chartResults, defaultPerformanceValues, algorithmNameMapping } from './chartResults';
+import {
+  generateChartData as generateChartDataUtil,
+  getYAxisUnit,
+  shouldShowChart,
+  shouldShowConsumptionChart,
+  shouldShowCpuGpuBars,
+  shouldShowReferenceLine,
+  isSpecialAlgorithm,
+  isRmatDataset
+} from './chartUtils';
+import ChartDisplay from './ChartDisplay';
 
-// 示例代码，在网络请求失败时使用
-const sampleCodes = {
-  'bfs': { 
-    frameworkCode: '# Sample BFS framework code', 
-    cgaCode: '# Sample BFS CGA code' 
-  },
-  'sssp': { 
-    frameworkCode: '# Sample SSSP framework code', 
-    cgaCode: '# Sample SSSP CGA code' 
-  },
-  'wcc': { 
-    frameworkCode: '# Sample WCC framework code', 
-    cgaCode: '# Sample WCC CGA code' 
-  },
-  'kcore': { 
-    frameworkCode: '# Sample K-Core framework code', 
-    cgaCode: '# Sample K-Core CGA code' 
-  },
-  'kclique': { 
-    frameworkCode: '# Sample K-Clique framework code', 
-    cgaCode: '# Sample K-Clique CGA code' 
-  },
-  'ppr': { 
-    frameworkCode: '# Sample PPR framework code', 
-    cgaCode: '# Sample PPR CGA code' 
-  },
-  'gcn': { 
-    frameworkCode: '# Sample GCN framework code', 
-    cgaCode: '# Sample GCN CGA code' 
-  }
-};
 
 // 导入请求工具
 const request = {
-  BASE_URL: 'http://127.0.0.1:8000' // 这里需要替换为实际的后端URL
+  BASE_URL: 'http://10.11.74.113:8000' // 这里需要替换为实际的后端URL
 };
 
 // 算法和数据集映射
@@ -108,7 +87,6 @@ const Page = () => {
   const [visibleIRTabs, setVisibleIRTabs] = useState([]);
   const resultsBoxRef = useRef(null);
   const [chartData, setChartData] = useState([]);
-  const [chartMetric, setChartMetric] = useState('performance');
   const [originalCodeDisplay, setOriginalCodeDisplay] = useState('');
   const [transformedCode, setTransformedCode] = useState('');
   const simulatorBoxRef = useRef(null);
@@ -116,7 +94,7 @@ const Page = () => {
   const [selectedFramework, setSelectedFramework] = useState('');
   const [cgaAnimationEnabled, setCgaAnimationEnabled] = useState(false);
   
-  // 添加保存框架选择和算法选择的状态
+  // 框架转换 添加保存框架选择和算法选择的状态
   const [frameworkSelection, setFrameworkSelection] = useState({
     framework: '',
     algorithm: ''
@@ -124,6 +102,15 @@ const Page = () => {
 
   // 使用抽离出来的handleRun hook
   const { handleRun, isRunning, results, setResults } = useHandleRun(algorithmMappings);
+
+  // 添加一个状态来追踪最后执行的算法和数据集
+  const [lastExecutedData, setLastExecutedData] = useState({
+    algorithm: '',
+    datasets: []
+  });
+  
+  // 添加一个状态来控制右侧面板的隐藏
+  const [hidePanelsAfterSave, setHidePanelsAfterSave] = useState(false);
 
   // 初始化时设置默认算法和数据集
   useEffect(() => {
@@ -155,14 +142,6 @@ const Page = () => {
     if(newAlgorithm !== 'custom' && newAlgorithm !== 'framework' && algorithmMappings[newAlgorithm]) {
       const availableDatasets = algorithmMappings[newAlgorithm].datasets;
       setSelectedDataset(availableDatasets[0]);
-      // 如果当前选择的数据集不在新算法的可用数据集列表中，选择第一个数据集
-      // if (availableDatasets && availableDatasets.length > 0) {
-      //   if (!availableDatasets.includes(selectedDataset)) {
-      //     setSelectedDataset(availableDatasets[0]);
-      //   }
-      // } else {
-      //   setSelectedDataset('');
-      // }
     } else {
       // 对于自定义或框架生成，清空数据集选择
       setSelectedDataset('');
@@ -177,13 +156,27 @@ const Page = () => {
     setShowBottomPanels(prev => !prev);
   };
 
-  // 处理代码编辑
+  // 修改handleCodeChange函数以检测保存操作
   const handleCodeChange = (newCode, key) => {
     console.log(`Code changed for ${key}:`, newCode.substring(0, 20) + '...');
     setEditedCodes(prev => ({
       ...prev,
       [key]: newCode
     }));
+  };
+
+  // 添加保存代码的函数
+  const handleSaveCode = () => {
+    // 隐藏右侧面板
+    setShowRightPanel(false);
+    
+    // 清除可见的IR选项卡
+    setVisibleIRTabs([]);
+    
+    // 重置选项卡动画效果
+    setAnimatedTabs([]);
+    
+    console.log('代码已保存，已重置面板和选项卡状态');
   };
 
   // 获取指定算法可用的数据集列表
@@ -216,93 +209,6 @@ const Page = () => {
     scrollToBottom();
   }, [results]);
   
-  // 定义Y轴映射
-  const yAxisMap = {
-    'bfs': { 
-      performance: 'GTSPS',
-      consumption: 'GTSPS/W'
-    },
-    'sssp': { 
-      performance: 'GTSPS',
-      consumption: 'GTSPS/W'
-    },
-    'wcc': { 
-      performance: 'GTSPS',
-      consumption: 'GTSPS/W'
-    },
-    'kcore': { 
-      performance: 'GTSPS',
-      consumption: 'GTSPS/W'
-    },
-    'kclique': { 
-      performance: 'GTSPS',
-      consumption: 'GTSPS/W'
-    },
-    'ppr': { 
-      performance: 'GTSPS',
-      consumption: 'GTSPS/W'
-    },
-    'gcn': { 
-      performance: 'GTSPS',
-      consumption: 'GTSPS/W'
-    },
-  };
-  
-  // 获取当前算法的Y轴单位
-  const getYAxisUnit = (metric) => {
-    if (selectedAlgorithm && yAxisMap[selectedAlgorithm]) {
-      return yAxisMap[selectedAlgorithm][metric] || '';
-    }
-    return '';
-  };
-
-  // 生成示例图表数据
-  const generateChartData = () => {
-    if (!selectedAlgorithm || selectedAlgorithm === 'custom' || selectedAlgorithm === 'framework' || !selectedDataset) {
-      return;
-    }
-    
-    let performanceValue = 0;
-    let ptargetValue = 3;
-    let consumptionValue = 0;
-    let ctargetValue = 8;
-    
-    // 先检查chartResults中是否有对应算法和数据集的数据
-    if (chartResults[selectedAlgorithm] && chartResults[selectedAlgorithm][selectedDataset]) {
-      const resultData = chartResults[selectedAlgorithm][selectedDataset];
-      performanceValue = resultData.find(item => item.key.includes('性能('))?.value || 0;
-      ptargetValue = resultData.find(item => item.key.includes('性能指标要求'))?.value || 3;
-      consumptionValue = resultData.find(item => item.key.includes('性能功耗比('))?.value || 0;
-      ctargetValue = resultData.find(item => item.key.includes('性能功耗比指标要求'))?.value || 8;
-    } else {
-      // 如果没有预定义数据，使用默认性能值
-      const defaultValues = defaultPerformanceValues[selectedAlgorithm]?.[selectedDataset];
-      if (defaultValues) {
-        performanceValue = defaultValues.performance['1000MHz'];
-        ptargetValue = defaultValues.target.performance;
-        consumptionValue = defaultValues.consumption;
-        ctargetValue = defaultValues.target.consumption;
-      } else {
-        // 如果没有默认值，使用随机生成的数据
-        performanceValue = Math.random() * 4 + 3;
-        ptargetValue = 3;
-        consumptionValue = Math.random() * 3 + 8;
-        ctargetValue = 8;
-      }
-    }
-    
-    // 生成图表数据
-    const chartData = [{
-      name: selectedDataset,
-      performance: performanceValue,
-      ptarget: ptargetValue,
-      consumption: consumptionValue,
-      ctarget: ctargetValue
-    }];
-    
-    setChartData(chartData);
-  };
-
   // 处理流程图中模块的点击事件
   const handleModuleClick = (module) => {
     // 除了"exe执行"外的其他按钮点击时，如果界面在底部，则滑回顶部
@@ -385,11 +291,26 @@ const Page = () => {
         break;
       case 'exe执行':
         // 执行程序
-        handleRun(selectedAlgorithm, selectedDataset, selectedFramework, showBottomPanels, setShowBottomPanels, generateChartData);
+        handleRun(selectedAlgorithm, selectedDataset, selectedFramework, showBottomPanels, setShowBottomPanels, generateChartData, editedCodes);
         break;
       default:
         break;
     }
+  };
+
+  // 使用chartUtils中的函数生成图表数据
+  const generateChartData = () => {
+    // 调用工具函数生成图表数据
+    const { newChartData, newLastExecutedData } = generateChartDataUtil({
+      selectedAlgorithm,
+      selectedDataset,
+      chartData,
+      lastExecutedData
+    });
+    
+    // 更新图表数据和最后执行的数据
+    setChartData(newChartData);
+    setLastExecutedData(newLastExecutedData);
   };
 
   return (
@@ -458,6 +379,7 @@ const Page = () => {
                       frameworkSelection={frameworkSelection}
                       setFrameworkSelection={setFrameworkSelection}
                       cgaAnimationEnabled={cgaAnimationEnabled}
+                      onSave={handleSaveCode}
                     />
                   </Paper>
                 ) : (
@@ -581,7 +503,10 @@ const Page = () => {
                                 line.includes('[  PASSED  ]') ||
                                 line.includes('freq=1000 MHz')) {
                               return (
-                                <div key={index} style={{ color: '#67ad5b' /* 绿色 */ }}>
+                                <div key={index} style={{ 
+                                  color: '#4caf50',
+                                  fontWeight: 'bold'
+                                  }}>
                                   {line}
                                 </div>
                               );
@@ -622,153 +547,64 @@ const Page = () => {
                     p: 2,
                     borderRadius: 1,
                   }}>
-                    {/* 加载进度条 */}
+                    {/* 执行中的逻辑 */}
                     {isRunning ? (
-                      <Box sx={{ width: '100%', mb: 3 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                          执行中，请稍候...
-                        </Typography>
-                        <LinearProgress color="primary" />
-                      </Box>
+                      <>
+                        {/* 加载进度条 */}
+                        <Box sx={{ width: '100%', mb: 3 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            执行中，请稍候...
+                          </Typography>
+                          <LinearProgress color="primary" />
+                        </Box>
+                        
+                        {/* 判断是否显示图表 */}
+                        {(() => {
+                          // IIFE（立即调用函数表达式）用于在JSX中执行复杂逻辑并返回结果
+                          
+                          // 判断是否有图表数据
+                          const hasChartData = chartData && chartData.length > 0;
+                          
+                          // 判断是否为特殊算法（kclique, ppr, gcn）
+                          const isSpecialAlgo = isSpecialAlgorithm(selectedAlgorithm);
+                          
+                          // 判断是否为RMAT数据集
+                          const isRmatDatasetValue = isRmatDataset(selectedDataset);
+                          
+                          // 判断是否有之前的数据（相同算法且有数据集）
+                          const hasPreviousData = lastExecutedData.algorithm === selectedAlgorithm && 
+                                                (lastExecutedData.datasets || []).length > 0;
+                          
+                          console.log('图表显示条件判断:', {
+                            hasChartData,
+                            isSpecialAlgo,
+                            isRmatDatasetValue,
+                            hasPreviousData,
+                            isRunning
+                          });
+                          
+                          // 使用ChartDisplay组件替换原有的图表显示逻辑
+                          return (
+                            <ChartDisplay 
+                              chartData={chartData}
+                              selectedAlgorithm={selectedAlgorithm}
+                              selectedDataset={selectedDataset}
+                              lastExecutedData={lastExecutedData}
+                              isRunning={isRunning}
+                            />
+                          );
+                        })()}
+                      </>
                     ) : (
-                    /* 性能图表 */
-                    chartData.length > 0 ? (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
-                        {/* 只有对特定算法显示选项卡 */}
-                        {['kclique', 'ppr', 'gcn'].includes(selectedAlgorithm) ? (
-                          <Tabs
-                            value={chartMetric}
-                            onChange={(e, v) => setChartMetric(v)}
-                            sx={{ mb: 3, alignSelf: 'flex-start' }}
-                          >
-                            <Tab label="性能" value="performance" style={{ fontWeight: 'bold', color: 'black' }} />
-                            <Tab label="性能功耗比" value="consumption" style={{ fontWeight: 'bold', color: 'black' }} />
-                          </Tabs>
-                        ) : (
-                          // 对其他算法，强制设置为性能选项卡，不显示切换选项
-                          <Box sx={{ mb: 3, alignSelf: 'flex-start' }}>
-                            <Typography variant="button" 
-                              sx={{ 
-                                fontWeight: 'bold', 
-                                color: 'black', 
-                                borderBottom: '2px solid #1976d2',
-                                pb: 0.5
-                              }}
-                            >
-                              性能
-                            </Typography>
-                          </Box>
-                        )}
-
-                        {/* 只显示相应的图表 */}
-                        {((['kclique', 'ppr', 'gcn'].includes(selectedAlgorithm) && chartMetric === 'performance') || 
-                          (!['kclique', 'ppr', 'gcn'].includes(selectedAlgorithm))) ? (
-                          <BarChart
-                            data={chartData}
-                            margin={{ top: 50, right: 20, left: 20, bottom: 20 }}
-                            width={480}
-                            height={380}
-                          >
-                            <text
-                              x="50%"
-                              y={15}
-                              textAnchor="middle"
-                              style={{ fontSize: '16px', fontWeight: 'bold' }}
-                            >
-                              {`${selectedAlgorithm.toUpperCase()} 性能测试结果`}
-                            </text>
-                            <YAxis
-                              label={{
-                                value: `性能值(${getYAxisUnit('performance')})`,
-                                angle: -90,
-                                position: 'insideLeft'
-                              }}
-                            />
-                            <XAxis dataKey="name"/>
-                            <Legend
-                              verticalAlign="bottom"
-                              height={36}
-                              wrapperStyle={{ fontSize: '14px', paddingTop: '10px' }}
-                            />
-                            <Bar
-                              dataKey="performance"
-                              fill="#1976d2"
-                              radius={[4, 4, 0, 0]}
-                              barSize={40}
-                              name={'性能值'}
-                              label={{
-                                position: 'top',
-                                formatter: (value) => value.toFixed(4)
-                              }}
-                            />
-                            <Bar
-                              dataKey="ptarget"
-                              fill="green"
-                              radius={[4, 4, 0, 0]}
-                              barSize={40}
-                              name={'中期指标值'}
-                              label={{
-                                position: 'top',
-                              }}
-                            />
-                          </BarChart>
-                        ) : (
-                          <BarChart
-                            data={chartData}
-                            margin={{ top: 50, right: 20, left: 20, bottom: 20 }}
-                            width={480}
-                            height={380}
-                          >
-                            <text
-                              x="50%"
-                              y={15}
-                              textAnchor="middle"
-                              style={{ fontSize: '16px', fontWeight: 'bold' }}
-                            >
-                              {`${selectedAlgorithm.toUpperCase()} 功耗比测试结果`}
-                            </text>
-                            <YAxis
-                              label={{
-                                value: `性能值(${getYAxisUnit('consumption')})`,
-                                angle: -90,
-                                position: 'insideLeft'
-                              }}
-                            />
-                            <XAxis dataKey="name" />
-                            <Legend
-                              verticalAlign="bottom"
-                              height={36}
-                              wrapperStyle={{ fontSize: '14px', paddingTop: '10px' }}
-                            />
-                            <Bar
-                              dataKey="consumption"
-                              fill="#1976d2"
-                              name={'性能功耗比'}
-                              radius={[4, 4, 0, 0]}
-                              barSize={40}
-                              label={{
-                                position: 'top',
-                                formatter: (value) => value.toFixed(4)
-                              }}
-                            />
-                            <Bar
-                              dataKey="ctarget"
-                              fill="green"
-                              radius={[4, 4, 0, 0]}
-                              barSize={40}
-                              name={'性能功耗比中期指标值'}
-                              label={{
-                                position: 'top',
-                              }}
-                            />
-                          </BarChart>
-                        )}
-                      </Box>
-                    ) : (
-                      <Typography variant="body1">
-                        性能结果将在执行完成后显示...
-                      </Typography>
-                    ))}
+                      // 执行完成或没有数据的情况
+                      <ChartDisplay 
+                        chartData={chartData}
+                        selectedAlgorithm={selectedAlgorithm}
+                        selectedDataset={selectedDataset}
+                        lastExecutedData={lastExecutedData}
+                        isRunning={isRunning}
+                      />
+                    )}
                   </Box>
                 </Paper>
               </Grid>
@@ -781,11 +617,11 @@ const Page = () => {
       <Zoom in={true}>
         <Fab
           color="primary"
-          size="medium"
+          size="large"
           onClick={toggleBottomPanels}
           sx={{
             position: 'absolute',
-            bottom: 16,
+            bottom: 26,
             right: 16,
             zIndex: 1000,
           }}

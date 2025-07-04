@@ -121,7 +121,39 @@ const customPrismStyles = `
 `;
 
 // 基础URL
-const BASE_URL = 'http://127.0.0.1:8000';
+const BASE_URL = 'http://10.11.74.113:8000';
+
+// 算法和数据集映射
+const algorithmMappings = {
+  'bfs': {
+    url: 'bfs',
+    datasets: ['smallgraph', 'facebook', 'physics'],
+  },
+  'sssp': {
+    url: 'sssp',
+    datasets: ['smallgraph', 'facebook', 'physics'],
+  },
+  'wcc': {
+    url: 'wcc',
+    datasets: ['euroroad', 'pdzbase', 'facebook'],
+  },
+  'kcore': {
+    url: 'kcore',
+    datasets: ['physics', 'facebook'],
+  },
+  'kclique': {
+    url: 'cf',
+    datasets: ['Rmat-16','Rmat-18', 'Rmat-20','euroroad', 'physics'],
+  },
+  'ppr': {
+    url: 'ppr',
+    datasets: ['Rmat-16','Rmat-18','Rmat-20','smallgraph', 'physics', 'facebook'],
+  },
+  'gcn': {
+    url: 'gcn',
+    datasets: ['Rmat-16','Rmat-17','Rmat-18', 'cora'],
+  }
+};
 
 const CodeDisplay = ({ 
   code, 
@@ -131,7 +163,8 @@ const CodeDisplay = ({
   showSaveButton = false,
   algorithm = 'bfs', // 当前选择的算法
   dataset = 'nodataset', // 当前选择的数据集
-  onIRChange = () => {} // 当IR代码更新时的回调
+  onIRChange = () => {}, // 当IR代码更新时的回调
+  onSave = () => {} // 当保存触发时的回调
 }) => {
   const [editedCode, setEditedCode] = useState(code);
   const [highlightedCode, setHighlightedCode] = useState('');
@@ -309,10 +342,29 @@ const CodeDisplay = ({
     }
   };
 
-  // 保存代码函数
+  // NOTE 负责处理保存代码的函数
   const handleSaveCode = async () => {
     console.log('保存代码:', editedCode);
-    // TODO 保存代码相关
+    
+    // 检查并提取特定算法的参数值
+    if (algorithm === 'ppr') {
+      // 使用正则表达式提取maxiter值
+      const maxiterRegex = /self\.CGAprop\.maxiter\s*=\s*(\d+)/;
+      const match = editedCode.match(maxiterRegex);
+      if (match && match[1]) {
+        console.log('检测到PPR的maxiter值:', match[1]);
+      }
+    } else if (algorithm === 'kcore') {
+      // 使用正则表达式提取K值
+      const kRegex = /self\.K\s*:\s*int\s*=\s*(\d+)/;
+      const match = editedCode.match(kRegex);
+      if (match && match[1]) {
+        console.log('检测到KCore的K值:', match[1]);
+      }
+    }
+    
+    // 触发父组件的保存回调
+    onSave();
     
     try {
       setIsSaving(true);
@@ -320,7 +372,8 @@ const CodeDisplay = ({
       setProgress(10);
 
       // 步骤1: 将修改后的CGA代码写入后端
-      const writeUrl = `${BASE_URL}/part3/write/1/${algorithm}/`;
+      const algorithmUrl = algorithmMappings[algorithm]?.url || algorithm;
+      const writeUrl = `${BASE_URL}/part3/write/1/${algorithmUrl}/`;
       console.log(`调用API: ${writeUrl}`);
       
       const writeResponse = await fetch(writeUrl, {
