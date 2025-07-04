@@ -1,5 +1,345 @@
 // 代码数据
 export const codeData = {
+  'g++':  `cmake_minimum_required(VERSION 3.5.0)
+
+project(simulator)
+
+# 设置C++标准
+set(CMAKE_CXX_STANDARD 17)
+
+# 设置构建类型：Debug/Release
+set(CMAKE_BUILD_TYPE "Debug")
+# CMAKE_BUILD_TYPE为Debug时的编译选项
+set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -fexceptions -Wno-sign-compare -Wno-unused-result")
+# CMAKE_BUILD_TYPE为Release时的编译选项
+set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -Wall -fexceptions -Wno-sign-compare -Wno-unused-result")
+
+# 添加子项目
+add_subdirectory(\${CMAKE_SOURCE_DIR}/3rd/asm-compiler)
+add_subdirectory(\${CMAKE_SOURCE_DIR}/3rd/graph-driver/sdk)
+add_subdirectory(\${CMAKE_SOURCE_DIR}/3rd/DRAMsim3)
+add_subdirectory(\${CMAKE_SOURCE_DIR}/3rd/eigen)
+
+# 添加头文件目录，相当于g++的-I参数
+include_directories(
+    ./inc test/inc ./compiler/inc
+    ./3rd/asm-compiler/include
+    ./3rd/graph-driver/sdk/include
+)
+
+# 添加link的目录，相当于g++的-L参数
+# link_directories()
+
+# 收集所有源文件，保存到变量SRCS中
+aux_source_directory(src/backend SRCS)
+aux_source_directory(src/backend/commit SRCS)
+aux_source_directory(src/backend/executor SRCS)
+aux_source_directory(src/backend/executor/scalar SRCS)
+aux_source_directory(src/backend/executor/graph SRCS)
+aux_source_directory(src/backend/executor/queue SRCS)
+aux_source_directory(src/backend/executor/spec SRCS)
+aux_source_directory(src/backend/executor/vector SRCS)
+aux_source_directory(src/backend/qregfile SRCS)
+aux_source_directory(src/backend/scheduler SRCS)
+aux_source_directory(src/backend/scheduler/sub_sched SRCS)
+aux_source_directory(src/backend/sregfile SRCS)
+aux_source_directory(src/backend/vregfile SRCS)
+aux_source_directory(src/dma SRCS)
+aux_source_directory(src/dma/utils SRCS)
+aux_source_directory(src/dma/sub_mod SRCS)
+aux_source_directory(src/frontend SRCS)
+aux_source_directory(src/frontend/decode SRCS)
+aux_source_directory(src/frontend/fetch SRCS)
+aux_source_directory(src/frontend/inst_mem SRCS)
+aux_source_directory(src/frontend/issue SRCS)
+aux_source_directory(src/frontend/scoreboard SRCS)
+aux_source_directory(src/processor SRCS)
+aux_source_directory(src/spm SRCS)
+aux_source_directory(src/spm/s_spm SRCS)
+aux_source_directory(src/spm/v_spm SRCS)
+aux_source_directory(src/utils SRCS)
+aux_source_directory(synopsys/ip SRCS)
+aux_source_directory(adaptor/arithmetic SRCS)
+aux_source_directory(adaptor/arithmetic/FP32 SRCS)
+aux_source_directory(adaptor/fifo SRCS)
+aux_source_directory(adaptor/sram SRCS)
+aux_source_directory(adaptor/dram SRCS)
+
+aux_source_directory(compiler/src SRCS)
+aux_source_directory(simulator SRCS)
+
+message(status "\${SRCS}")
+# 如果要增加其他源文件，可以继续使用aux_source_directory命令
+# aux_source_directory(./xxx SRCS)
+
+# 添加一个静态库目标
+add_library(src_lib STATIC \${SRCS}
+        test/inc/simulator_test.h
+        src/backend/executor/scalar/scalar_exer.cpp
+        src/backend/executor/scalar/scalar_exer_top.cpp
+        src/backend/executor/vector/vexer_com.cpp
+        src/backend/executor/vector/vexer_top.cpp
+        src/backend/executor/vector/vexer_special.cpp)
+
+add_dependencies(src_lib asm_lib)
+
+# 添加一个可执行目标
+# add_executable(sim ./src/main.cpp)
+
+# 可执行目标需要与src_lib链接
+# target_link_libraries(sim src_lib)
+
+# test相关的配置
+include_directories(
+    ./3rd/googletest/googletest/include
+)
+link_directories(
+    ./3rd/googletest/lib
+)
+
+# Dramsim3相关的配置
+include_directories(
+    ./3rd/DRAMsim3/src
+    ./3rd/DRAMsim3/ext/headers
+)
+link_directories(
+    ./3rd/DRAMsim3
+)
+
+include_directories((
+    ./3rd/eigen/Eigen
+))
+link_directories(
+    ./3rd/eigen
+)
+
+aux_source_directory(test/simulator TESTS)
+
+foreach (v \${TESTS})
+    string (REGEX MATCH "test/.*" relative_path \${v})
+    string (REGEX REPLACE "test.*/" "" target_name \${relative_path})
+    string (REGEX REPLACE ".cpp" "" target_name \${target_name})
+    message("\${target_name}")
+    add_executable (test_\${target_name} \${relative_path})
+    target_link_libraries (test_\${target_name} gtest pthread src_lib asm_lib sdk_lib dramsim3 eigen)
+endforeach()
+
+add_custom_target(
+    "run_test"
+    COMMENT
+    "Run all testcase to check code"
+)
+add_custom_target(
+    "run_testsuit"
+    COMMENT
+    "Run testuit"
+)
+add_custom_command(
+    TARGET "run_test"
+    POST_BUILD
+    COMMENT "Copy bash script and Run all testcase"
+    COMMAND
+    cp \${PROJECT_SOURCE_DIR}/run_test.sh \${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND
+    bash run_test.sh
+)
+
+add_custom_command(
+    TARGET "run_testsuit"
+    POST_BUILD
+    COMMENT "Copy bash script and Run testsuit"
+    COMMAND
+    cp \${PROJECT_SOURCE_DIR}/testsuit.sh \${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND
+    bash testsuit.sh
+)
+
+# doxy生成文档相关的配置
+#find_package(Doxygen REQUIRED)
+#set (DOXYGEN_GENERATE_HTML "YES" CACHE STRING "Doxygen HTML output")
+#set (DOXYGEN_GENERATE_LATEX "NO" CACHE STRING "Doxygen LATEX output")
+#set (DOXYGEN_FILE_PATTERNS *.cpp *.h *.md CACHE STRING "Doxygen File Patterns")
+#set (DOXYGEN_EXTRACT_ALL YES)
+#set (DOXYGEN_CALL_GRAPH YES)
+#set (DOXYGEN_CALLER_GRAPH YES)
+#set (DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
+#set (DOXYGEN_EXCLUDE_PATTERNS */test/* */3rd/* */build/* */doc/* CACHE STRING "Doxygen exclude patterns")
+#set (DOXYGEN_PROJECT_NUMBER \${CMAKE_PROJECT_VERSION} CACHE STRING "")
+#set (DOXYGEN_GENERATE_TREEVIW YES)
+#set (DOXYGEN_DISABLE_INDEX NO)
+#set (DOXYGEN_HAVE_DOT YES)
+#set (DOXYGEN_OUTPUT_DIRECTORY \${PROJECT_SOURCE_DIR}/doc)
+#message(STATUS "project source dir: " \${PROJECT_SOURCE_DIR})
+#doxygen_add_docs (doc
+#    \${PROJECT_SOURCE_DIR}/src
+#    \${PROJECT_SOURCE_DIR}/inc
+#    \${PROJECT_SOURCE_DIR}
+#    COMMENT "Generating documents vis Doxygen"
+#)
+`,
+  'bin':`47 72 61 70 68 20 55 6e 69 74 20 4b 65 72 6e 65 
+6c 20 42 69 6e 61 72 79 20 46 6f 72 6d 61 74 0a 
+69 6e 73 74 20 63 6f 75 6e 74 3a 31 31 36 2c 20 
+74 6f 74 61 6c 20 73 69 7a 65 3a 33 37 31 32 0a 
+62 69 6e 61 72 79 20 73 65 63 74 69 6f 6e 3a 0a 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 20 00 01 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 20 00 02 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+40 00 00 00 20 00 03 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 e0 10 01 09 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 01 00 00 20 00 01 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 01 00 00 20 00 02 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+40 00 00 00 20 00 03 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 e0 10 01 09 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 06 00 00 09 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 01 00 00 22 00 01 07 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 20 00 0e 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 40 00 20 00 0f 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 62 78 0e 09 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 40 00 20 00 0e 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 80 00 20 00 0f 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 62 78 0e 09 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 80 00 20 00 0e 03 00 00 00 00 00 00 00 00 
+ab 00 00 00 ab 00 00 00 ab 00 00 00 ab 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+`,
     'device-cga': {
       'bfs': `# 这里是BFS的CGA代码
 from graph_dsl import *
@@ -329,7 +669,915 @@ for i ← 0 to iter - 1 do
     if finish then
         break;
 
-distGraph.MPI_Finalize();`
+distGraph.MPI_Finalize();`,
+      'framework': `// 这是框架转换生成的主机代码`,
+      'kclique': `#include <iostream>
+#include "simulator.h"
+#include "graph_sdk/aas/aas.h"
+#include "graph_utils.h"
+#include "mm_utils.h"
+
+extern int total_send_e_task;
+
+#define CORE_NUM (SIMD_WIDTH)
+#define MAX_V_NUM 5000000
+#define MAX_SIMULATE_CYCLE 10000000000
+
+using namespace graph_mm;
+
+int v_num, e_num;
+int *off;
+int *edge;
+// 要求测试的图是无向图，因此facebook不行。跑出来的结果没啥意义。
+// 这里加反向边是因为从数据中导入的无向图是没有反向边的，需要手动加上
+char file_name[] = "../data/data_edgelist/euroroad.txt";
+load_graph_edgelist(v_num, e_num, off, edge, file_name);
+int off_new[v_num + 1] = {0};
+int edge_new[2 * e_num] = {0};
+graph_add_reverse_edge(v_num, e_num, off, edge, off_new, edge_new);
+
+int soc_old[v_num] = {0};
+int soc_new[v_num] = {0};
+int cpu_res[v_num] = {0};
+printf("Dump offset: \\n");
+for (int i = 0; i <= v_num; i++)
+{
+    printf("%d ", off[i]);
+}
+printf("Dump offset: \\n");
+for (int i = 0; i < v_num; i++)
+{
+    cpu_res[i] = i;
+    soc_old[i] = i;
+}
+kc_push(v_num, edge_new, off_new, cpu_res);
+///home/work/hjq/cycle-accurate-sim/test/asm/asm_compiler/kc.asm
+std::string bfs_asm = std::string("../test/asm_test/GraphTraversal/kc_test.asm");
+std::string bfs_bin = std::string("../test/asm_test/GraphTraversal/kc_test.bin");
+
+m_simulator->parse_asm_to_bin(bfs_asm.c_str(), bfs_bin.c_str());
+
+m_aas->wait_event(AAS_SOC_READY);
+printf("[Simulator]: SOC ready, begin to dma data\\n");
+
+// 1. DMA 数据
+m_aas->dma_graph_data((char*)(&v_num), 0 , sizeof(int));
+int v_num_aligned = (v_num*4 + 255) & (~(255)); 
+printf("Aligned v_num : %d\\n", v_num_aligned);
+m_aas->dma_graph_data((char*)(&v_num_aligned),  256, sizeof(int));
+                                
+m_aas->dma_graph_data((char *)off_new, 4 * 1024 * 1024, sizeof(int) * (v_num));                     // st
+m_aas->dma_graph_data((char *)&(off_new[1]), 8 * 1024 * 1024, sizeof(int) * (v_num)); // ed
+m_aas->dma_graph_data((char *)(soc_old), 12 * 1024 * 1024, sizeof(int) * (v_num));     // old_v
+m_aas->dma_graph_data((char *)(soc_old), 16 * 1024 * 1024, sizeof(int) * (v_num));    // new_v
+
+        
+m_aas->dma_graph_data((char *)edge_new, 24 * 1024 * 1024, sizeof(int) * e_num * 2); // edge
+
+// 2. 启动计算
+m_aas->start_kernel(bfs_bin.c_str());
+
+// 3. 等待计算完成
+m_aas->wait_event(AAS_SOC_KERNEL_DONE);
+
+// 4. 检测计算结果
+printf("[Simulator]: copy data from lpddr to CPU ...\\n");
+/// 4.1 ASM中将结果写入lpddr的位置, 因此从lpddr的位置读取到CPU端
+// old_v写回2048  new_v写回2304
+m_aas->dma_from_lpddr((char *)soc_new, 20 * 1024 * 1024, sizeof(int) * v_num);
+printf("[Simulator]: LPDDR to CPU done, check result\\n");
+
+m_aas->stop_core();
+
+// 5. 等待本轮SOC模拟退出
+m_aas->wait_event(AAS_SOC_DONE);
+
+bool passed = true;
+for (int i = 0; i < v_num; i++)
+{
+    if (soc_new[i] != cpu_res[i])
+    {
+        passed = false;
+        printf("Err on %d, soc res:%d, expected res:%d\\n", i, soc_new[i], cpu_res[i]);
+        EXPECT_EQ(soc_new[i], cpu_res[i]);
+    }
+}
+if (passed)
+{
+    int freq = 150;
+    printf("[Simulator]: bfs passed\\n");
+    printf("[Simulator]: bfs core start clk: %d\\n", m_simulator->_core_start_clk);
+    printf("[Simulator]: bfs core end clk: %d\\n", m_simulator->_core_end_clk);
+    printf("[Simulator]: bfs do edge task: %d\\n", total_send_e_task);
+    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+    freq = 1000;
+    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+}
+else
+{
+    printf("[Simulator]: bfs NOT passed\\n");
+}
+printf("CPU result: \\n");
+for (int i = 0; i < v_num; i++)
+{
+    printf("Node : %d, Tag : %d\\n", i, cpu_res[i]);
+}
+printf("Kernel result: \\n");
+printf("RES new_v: \\n");
+for (int i = 0; i < v_num; i++)
+{
+    printf("Node : %d, Tag : %d\\n", i, soc_new[i]);
+}
+printf("KC res : \\n");
+if (passed)
+{
+    Print_KC(v_num, soc_new);
+}
+`,
+      'kcore': `#include <iostream>
+#include "simulator.h"
+#include "graph_sdk/aas/aas.h"
+#include "graph_utils.h"
+#include "mm_utils.h"
+
+extern int total_send_e_task;
+
+#define CORE_NUM (SIMD_WIDTH)
+#define MAX_V_NUM 5000000
+#define MAX_SIMULATE_CYCLE 10000000000
+
+using namespace graph_mm;
+
+int v_num, e_num;
+int *off;
+int *edge;
+char off_name[] = "../data/facebook_off.txt";
+char list_name[] = "../data/facebook_list.txt";
+load_graph(v_num, e_num, off, edge, off_name, list_name);
+int *off_new = new int[v_num + 1];
+int *edge_new = new int[2 * e_num];
+graph_add_reverse_edge(v_num, e_num, off, edge, off_new, edge_new);
+printf("edge new : \\n");
+// for(int i=0 ;i<2*e_num; ++i){
+//    printf("%d,", edge_new[i]);
+// }
+// printf("\\n");
+
+int init_v[v_num] = {0};
+int init_newv[v_num] = {0};
+int soc_res[v_num] = {0};
+int degree_res[v_num] = {0};
+int cpu_res[v_num] = {0};
+int cpu_res_degree[v_num] = {0};
+int degree[v_num] = {0};
+for (int i = 0; i < v_num; i++)
+{
+    cpu_res[i] = 1;
+    init_v[i] = 1;
+    degree_res[i] = 0;
+    init_newv[i] = 0;
+    degree[i] = off_new[i + 1] - off_new[i];
+}
+// facebook的节点度数都挺高的，得找10k-core，图可能进行预处理了？
+// 倒数第三个参数是是Kcore 的 K值，在这里修改之后也要记得修改汇编
+// 58 QSLTI Q8, Q7, 10 
+int iter = kcore_push(v_num, edge_new, off_new, cpu_res, cpu_res_degree, 10, true, 30);
+
+std::string sssp_asm = std::string("../test/asm_test/GraphTraversal/kcore_test.asm");
+std::string sssp_bin = std::string("../test/asm_test/GraphTraversal/kcore_test.bin");
+
+m_simulator->parse_asm_to_bin(sssp_asm.c_str(), sssp_bin.c_str());
+
+m_aas->wait_event(AAS_SOC_READY);
+printf("[Simulator]: SOC ready, begin to dma data\\n");
+
+// 1. DMA 数据
+// DDR->SPM
+m_aas->dma_graph_data((char*)(&v_num), 0 , sizeof(int));
+int v_num_aligned = (v_num*4 + 255) & (~(255)); 
+printf("Aligned v_num : %d\\n", v_num_aligned);
+m_aas->dma_graph_data((char*)(&v_num_aligned),  256, sizeof(int));
+                                        
+m_aas->dma_graph_data((char *)off_new, 4 * 1024 * 1024, sizeof(int) * (v_num));                     // st
+m_aas->dma_graph_data((char *)&(off_new[1]), 8 * 1024 * 1024, sizeof(int) * (v_num)); // ed
+// new_v 计算结果，每次更新要置0
+m_aas->dma_graph_data((char *)(init_newv), 12 * 1024 * 1024, sizeof(int) * (v_num)); // new_v
+// node_mask 初始化全1
+m_aas->dma_graph_data((char *)(degree), 16 * 1024 * 1024, sizeof(int) * (v_num)); // degree
+m_aas->dma_graph_data((char *)(init_v), 20 * 1024 * 1024, sizeof(int) * (v_num)); // node_mask
+
+                                                                                    // DDR上的边数据
+                                                                    
+m_aas->dma_graph_data((char *)edge_new, 32 * 1024 * 1024, sizeof(int) * (e_num * 2)); // edge
+
+// 2. 启动计算
+m_aas->start_kernel(sssp_bin.c_str());
+
+// 3. 等待计算完成
+m_aas->wait_event(AAS_SOC_KERNEL_DONE);
+
+// 4. 检测计算结果
+printf("[Simulator]: copy data from lpddr to CPU ...\\n");
+/// 4.1 ASM中将结果写入lpddr的位置, 因此从lpddr的位置读取到CPU端
+// old_v写回2048  new_v写回2304
+m_aas->dma_from_lpddr((char *)soc_res, 24 * 1024 * 1024, sizeof(int) * v_num);
+m_aas->dma_from_lpddr((char *)degree_res, 28 * 1024 * 1024, sizeof(int) * v_num);
+printf("[Simulator]: LPDDR to CPU done, check result\\n");
+
+m_aas->stop_core();
+
+// 5. 等待本轮SOC模拟退出
+m_aas->wait_event(AAS_SOC_DONE);
+
+bool passed = true;
+for (int i = 0; i < v_num; i++)
+{
+    if (soc_res[i] != cpu_res[i])
+    {
+        passed = false;
+        printf("Err on %d, soc res:%d, expected res:%d\\n", i, soc_res[i], cpu_res[i]);
+        EXPECT_EQ(soc_res[i], cpu_res[i]);
+    }
+
+    // if (degree_res[i] != cpu_res_degree[i]) {
+    //     passed = false;
+    //     printf("Err on %d, degree_res:%d, expected res:%d\\n", i, degree_res[i], cpu_res_degree[i]);
+    //     EXPECT_EQ(degree_res[i], cpu_res_degree[i]);
+    // }
+}
+
+if (passed)
+{
+    int freq = 150;
+    printf("[Simulator]: sssp passed\\n");
+    printf("[Simulator]: sssp core start clk: %d\\n", m_simulator->_core_start_clk);
+    printf("[Simulator]: sssp core end clk: %d\\n", m_simulator->_core_end_clk);
+    printf("[Simulator]: sssp do edge task: %d\\n", total_send_e_task);
+    printf("[Simulator]: freq=%d MHz, sssp performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+    freq = 1000;
+    printf("[Simulator]: freq=%d MHz, sssp performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+}
+else
+{
+    printf("[Simulator]: sssp NOT passed\\n");
+}
+
+printf("CPU result: \\n");
+for (int i = 0; i < v_num; i++)
+{
+    printf("Node : %d, tag : %d\\n", i, cpu_res[i]);
+}
+printf("Kernel result: \\n");
+printf("RES node_mask: \\n");
+for (int i = 0; i < v_num; i++)
+{
+    printf("Node : %d, tag : %d\\n", i, soc_res[i]);
+}`,
+      'wcc': `#include <iostream>
+#include "simulator.h"
+#include "graph_sdk/aas/aas.h"
+#include "graph_utils.h"
+#include "mm_utils.h"
+
+extern int total_send_e_task;
+
+#define CORE_NUM (SIMD_WIDTH)
+#define MAX_V_NUM 5000000
+#define MAX_SIMULATE_CYCLE 10000000000
+
+using namespace graph_mm;
+
+int v_num, e_num;
+int *off;
+int *edge;
+// 要求测试的图是无向图，因此facebook不行。跑出来的结果没啥意义。
+// 这里加反向边是因为从数据中导入的无向图是没有反向边的，需要手动加上
+char file_name[] = "../data/data_edgelist/euroroad.txt";
+load_graph_edgelist(v_num, e_num, off, edge, file_name);
+int off_new[v_num + 1] = {0};
+int edge_new[2 * e_num] = {0};
+graph_add_reverse_edge(v_num, e_num, off, edge, off_new, edge_new);
+
+int soc_old[v_num] = {0};
+int soc_new[v_num] = {0};
+int cpu_res[v_num] = {0};
+printf("Dump offset: \\n");
+for (int i = 0; i <= v_num; i++)
+{
+    printf("%d ", off[i]);
+}
+printf("Dump offset: \\n");
+for (int i = 0; i < v_num; i++)
+{
+    cpu_res[i] = i;
+    soc_old[i] = i;
+}
+wcc_push(v_num, edge_new, off_new, cpu_res);
+///home/work/hjq/cycle-accurate-sim/test/asm/asm_compiler/wcc.asm
+std::string bfs_asm = std::string("../test/asm_test/GraphTraversal/wcc_test.asm");
+std::string bfs_bin = std::string("../test/asm_test/GraphTraversal/wcc_test.bin");
+
+m_simulator->parse_asm_to_bin(bfs_asm.c_str(), bfs_bin.c_str());
+
+m_aas->wait_event(AAS_SOC_READY);
+printf("[Simulator]: SOC ready, begin to dma data\\n");
+
+// 1. DMA 数据
+m_aas->dma_graph_data((char*)(&v_num), 0 , sizeof(int));
+int v_num_aligned = (v_num*4 + 255) & (~(255)); 
+printf("Aligned v_num : %d\\n", v_num_aligned);
+m_aas->dma_graph_data((char*)(&v_num_aligned),  256, sizeof(int));
+                                
+m_aas->dma_graph_data((char *)off_new, 4 * 1024 * 1024, sizeof(int) * (v_num));                     // st
+m_aas->dma_graph_data((char *)&(off_new[1]), 8 * 1024 * 1024, sizeof(int) * (v_num)); // ed
+m_aas->dma_graph_data((char *)(soc_old), 12 * 1024 * 1024, sizeof(int) * (v_num));     // old_v
+m_aas->dma_graph_data((char *)(soc_old), 16 * 1024 * 1024, sizeof(int) * (v_num));    // new_v
+
+        
+m_aas->dma_graph_data((char *)edge_new, 24 * 1024 * 1024, sizeof(int) * e_num * 2); // edge
+
+// 2. 启动计算
+m_aas->start_kernel(bfs_bin.c_str());
+
+// 3. 等待计算完成
+m_aas->wait_event(AAS_SOC_KERNEL_DONE);
+
+// 4. 检测计算结果
+printf("[Simulator]: copy data from lpddr to CPU ...\\n");
+/// 4.1 ASM中将结果写入lpddr的位置, 因此从lpddr的位置读取到CPU端
+// old_v写回2048  new_v写回2304
+m_aas->dma_from_lpddr((char *)soc_new, 20 * 1024 * 1024, sizeof(int) * v_num);
+printf("[Simulator]: LPDDR to CPU done, check result\\n");
+
+m_aas->stop_core();
+
+// 5. 等待本轮SOC模拟退出
+m_aas->wait_event(AAS_SOC_DONE);
+
+bool passed = true;
+for (int i = 0; i < v_num; i++)
+{
+    if (soc_new[i] != cpu_res[i])
+    {
+        passed = false;
+        printf("Err on %d, soc res:%d, expected res:%d\\n", i, soc_new[i], cpu_res[i]);
+        EXPECT_EQ(soc_new[i], cpu_res[i]);
+    }
+}
+if (passed)
+{
+    int freq = 150;
+    printf("[Simulator]: bfs passed\\n");
+    printf("[Simulator]: bfs core start clk: %d\\n", m_simulator->_core_start_clk);
+    printf("[Simulator]: bfs core end clk: %d\\n", m_simulator->_core_end_clk);
+    printf("[Simulator]: bfs do edge task: %d\\n", total_send_e_task);
+    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+    freq = 1000;
+    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+}
+else
+{
+    printf("[Simulator]: bfs NOT passed\\n");
+}
+printf("CPU result: \\n");
+for (int i = 0; i < v_num; i++)
+{
+    printf("Node : %d, Tag : %d\\n", i, cpu_res[i]);
+}
+printf("Kernel result: \\n");
+printf("RES new_v: \\n");
+for (int i = 0; i < v_num; i++)
+{
+    printf("Node : %d, Tag : %d\\n", i, soc_new[i]);
+}
+printf("CC res : \\n");
+if (passed)
+{
+    Print_CC(v_num, soc_new);
+}
+`,
+      'sssp': `#include <iostream>
+#include "simulator.h"
+#include "graph_sdk/aas/aas.h"
+#include "graph_utils.h"
+#include "mm_utils.h"
+
+extern int total_send_e_task;
+
+#define CORE_NUM (SIMD_WIDTH)
+#define MAX_V_NUM 5000000
+#define MAX_SIMULATE_CYCLE 10000000000
+
+using namespace graph_mm;
+
+std::string sssp_asm = std::string("../test/asm/sssp_int_push_sync_dma.asm");
+std::string sssp_bin = std::string("../test/asm/sssp_int_push_sync_dma.bin");
+
+m_simulator->parse_asm_to_bin(sssp_asm.c_str(), sssp_bin.c_str());
+
+m_aas->wait_event(AAS_SOC_READY);
+printf("[Simulator]: SOC ready, begin to dma data\\n");
+
+// 1. DMA 数据
+int v_num = vertex_num;
+int e_num = 25;
+m_aas->dma_graph_data((char*)off, 0, sizeof(int)* (v_num));  // st
+m_aas->dma_graph_data((char*)&(off[1]), 4*1024*1024, sizeof(int)* (v_num));  // ed
+m_aas->dma_graph_data((char*)(init_v), 8*1024*1024, sizeof(int)* (v_num));  // old_v
+m_aas->dma_graph_data((char*)(init_v), 12*1024*1024, sizeof(int)* (v_num));  // new_v
+
+m_aas->dma_graph_data((char*)edge, 24*1024*1024, sizeof(int)* e_num);   // edge
+m_aas->dma_graph_data((char*)weight, 48*1024*1024, sizeof(int)* e_num);   // edge
+
+// 2. 启动计算
+m_aas->start_kernel(sssp_bin.c_str());
+
+// 3. 等待计算完成
+m_aas->wait_event(AAS_SOC_KERNEL_DONE);
+
+// 4. 检测计算结果
+printf("[Simulator]: copy data from lpddr to CPU ...\\n");
+/// 4.1 ASM中将结果写入lpddr的位置, 因此从lpddr的位置读取到CPU端
+// old_v写回2048  new_v写回2304
+m_aas->dma_from_lpddr((char*)soc_old, 16*1024*1024, sizeof(int)*v_num);
+m_aas->dma_from_lpddr((char*)soc_new, 20*1024*1024, sizeof(int)*v_num);
+printf("[Simulator]: LPDDR to CPU done, check result\\n");
+
+m_aas->stop_core();
+
+// 5. 等待本轮SOC模拟退出
+m_aas->wait_event(AAS_SOC_DONE);
+
+bool passed = true;
+for (int i = 0; i < vertex_num; i++) {
+    if (soc_new[i] != cpu_res[i]) {
+        passed = false;
+        printf("Err on %d, soc res:%d, expected res:%d\\n", i, soc_new[i], cpu_res[i]);
+        EXPECT_EQ(soc_new[i], cpu_res[i]);
+    }
+}
+if (passed) {
+    int freq = 150;
+    printf("[Simulator]: sssp passed\\n");
+    printf("[Simulator]: sssp core start clk: %d\\n", m_simulator->_core_start_clk);
+    printf("[Simulator]: sssp core end clk: %d\\n", m_simulator->_core_end_clk);
+    printf("[Simulator]: sssp do edge task: %d\\n", total_send_e_task);
+    printf("[Simulator]: freq=%d MHz, sssp performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+    freq = 1000;
+    printf("[Simulator]: freq=%d MHz, sssp performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+} else {
+    printf("[Simulator]: sssp NOT passed\\n");
+}
+printf("CPU result: \\n");
+for (int i = 0; i < vertex_num; i++) {
+    printf("Node : %d, Depth : %d\\n", i, cpu_res[i]);
+}
+printf("Kernel result: \\n");
+printf("RES old_v: \\n");
+for (int i = 0; i < vertex_num; i++) {
+    printf("Node : %d, Depth : %d\\n", i, soc_old[i]);
+}
+printf("RES new_v: \\n");
+for (int i = 0; i < vertex_num; i++) {
+    printf("Node : %d, Depth : %d\\n", i, soc_new[i]);
+}
+printf("Edge value: \\n");
+for (int i = 0; i < vertex_num; i++) {
+    int left = off[i];
+    int right = off[i + 1];
+    printf("Node: %d has edge\\n", i);
+    for (int j = left; j < right; ++ j) {
+        int dst = edge[j];
+        int value = weight[j];
+        printf("To %d, value : %d\\n", dst, value );
+    }
+}`,
+      'bfs': `#include <iostream>
+#include "simulator.h"
+#include "graph_sdk/aas/aas.h"
+#include "graph_utils.h"
+#include "mm_utils.h"
+
+extern int total_send_e_task;
+
+#define CORE_NUM (SIMD_WIDTH)
+#define MAX_V_NUM 5000000
+#define MAX_SIMULATE_CYCLE 10000000000
+
+using namespace graph_mm;
+
+std::string bfs_asm = std::string("../test/asm/bfs_push_async_dma_small_graph.asm");
+std::string bfs_bin = std::string("../test/asm/bfs_push_async_dma_small_graph.bin");
+m_simulator->parse_asm_to_bin(bfs_asm.c_str(), bfs_bin.c_str());
+
+m_aas->wait_event(AAS_SOC_READY);
+printf("[Simulator]: SOC ready, begin to dma data\\n");
+
+// 1. DMA 数据
+m_aas->dma_graph_data((char*)edge, 0, sizeof(int)* 24);
+m_aas->dma_graph_data((char*)off, 1024, sizeof(int)* (vertex_num));
+m_aas->dma_graph_data((char*)&(off[1]), 1024 + 256, sizeof(int)* (vertex_num));
+m_aas->dma_graph_data((char*)(init_v), 1792, sizeof(int)* (16));
+
+// 2. 启动计算
+m_aas->start_kernel(bfs_bin.c_str());
+
+// 3. 等待计算完成
+m_aas->wait_event(AAS_SOC_KERNEL_DONE);
+
+// 4. 检测计算结果
+printf("[Simulator]: copy data from lpddr to CPU ...\\n");
+/// 4.1 ASM中将结果写入lpddr的2048位置, 因此从lpddr的2048位置读取到CPU端
+m_aas->dma_from_lpddr((char*)soc_res, 2048, sizeof(int)*vertex_num);
+printf("[Simulator]: LPDDR to CPU done, check result\\n");
+
+m_aas->stop_core();
+
+// 5. 等待本轮SOC模拟退出
+m_aas->wait_event(AAS_SOC_DONE);
+
+bool passed = true;
+for (int i = 0; i < vertex_num; i++) {
+    if (soc_res[i] != res[i]) {
+        passed = false;
+        printf("Err on %d, soc res:%d, expected res:%d\\n", i, soc_res[i], res[i]);
+        EXPECT_EQ(soc_res[i], res[i]);
+    }
+}
+if (passed) {
+    int freq = 150;
+    printf("[Simulator]: bfs passed\\n");
+    printf("[Simulator]: bfs core start clk: %d\\n", m_simulator->_core_start_clk);
+    printf("[Simulator]: bfs core end clk: %d\\n", m_simulator->_core_end_clk);
+    printf("[Simulator]: bfs do edge task: %d\\n", total_send_e_task);
+    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+    freq = 1000;
+    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+} else {
+    printf("[Simulator]: bfs NOT passed\\n");
+}`,
+      'ppr': `#include <iostream>
+#include "simulator.h"
+#include "graph_sdk/aas/aas.h"
+#include "graph_utils.h"
+#include "mm_utils.h"
+
+extern int total_send_e_task;
+
+#define CORE_NUM (SIMD_WIDTH)
+#define MAX_V_NUM 5000000
+#define MAX_SIMULATE_CYCLE 10000000000
+
+using namespace graph_mm;
+
+std::string off_name = dataset_dir + std::string("off_list.txt");
+std::string edge_name = dataset_dir + std::string("edge_list.txt");
+load_graph (edge_name.c_str(), off_name.c_str());
+
+int iter = pr_push();
+
+std::string pr_asm = std::string("../test/asm/testsuit/pr_push_sync_dma.asm");
+std::string pr_bin = std::string("../test/asm/bin/pr_push_sync_dma.bin");
+m_simulator->parse_asm_to_bin(pr_asm.c_str(), pr_bin.c_str());
+
+m_aas->wait_event(AAS_SOC_READY);
+printf("[Simulator]: SOC ready, begin to dma data\\n");
+
+float damping = 0.85;
+float e1 = 1e-2, e2 = 1e-7;
+float one_over_n = 1.0 / v_num; // old delta
+int* i_one_over_n = (int *)&one_over_n;
+float addedConst = (1 - damping) * one_over_n; // old pr
+int* i_addedConst = (int *)&addedConst;
+float delta_new_ini_v = addedConst - one_over_n; // new delta
+int* i_delta_new_ini_v = (int *)&delta_new_ini_v;
+
+//int init_v[v_num] = {0}, init_new_v[v_num] = {0};
+int * init_v = new int[v_num];
+int * init_new_v = new int[v_num];
+
+// 1. DMA 数据
+int config[64] = {0};
+config[0] = v_num;
+config[1] = e_num;
+config[2] = iter;
+
+m_aas->dma_graph_data((char*)config, 0, sizeof(int)* (64));
+m_aas->dma_graph_data((char*)off_list, 16 * 1024 * 1024, sizeof(int)* (v_num));
+m_aas->dma_graph_data((char*)&(off_list[1]), 20 * 1024 * 1024, sizeof(int)* (v_num));
+// init old_v
+printf("one / v = %f, i_val: %d, delta_new_ini_v: %f, i_val:%d\\n",
+    one_over_n, *i_one_over_n, delta_new_ini_v, *i_delta_new_ini_v);
+for (int i = 0; i < v_num; i++) {
+    init_v[i] = *i_one_over_n;
+}
+m_aas->dma_graph_data((char*)(init_v), 4*1024*1024, sizeof(int)* (v_num));
+// init pr value
+m_aas->dma_graph_data((char*)(init_v), 12*1024*1024, sizeof(int)* (v_num));
+// init new_v
+for (int i = 0; i < v_num; i++) {
+    init_new_v[i] = *i_delta_new_ini_v;
+}
+m_aas->dma_graph_data((char*)(init_new_v), 8*1024*1024, sizeof(int)* (v_num));
+// send edge id
+m_aas->dma_graph_data((char*)(edge_list), 24*1024*1024, sizeof(int)* (e_num));
+
+
+// 2. 启动计算
+m_aas->start_kernel(pr_bin.c_str());
+
+// 3. 等待计算完成
+m_aas->wait_event(AAS_SOC_KERNEL_DONE);
+
+// 4. 检测计算结果
+printf("[Simulator]: copy data from lpddr to CPU ...\\n");
+//float soc_res[v_num] = {0};
+float * soc_res = new float[v_num];
+
+for (int i = 0; i < v_num; i++) {
+    soc_res[i] = 0;
+}
+/// 4.1 ASM中将结果写入lpddr的2048位置, 因此从lpddr的2048位置读取到CPU端
+m_aas->dma_from_lpddr((char*)soc_res, 12*1024*1024, sizeof(int)*v_num);
+printf("[Simulator]: LPDDR to CPU done, check result\\n");
+
+m_aas->stop_core();
+
+// 5. 等待本轮SOC模拟退出
+m_aas->wait_event(AAS_SOC_DONE);
+
+// check result
+double sum_dif = 0;
+double max_dif = 0;
+double max_deviation = 0;
+int max_deviation_id = 0;
+int max_dif_id = 0;
+int err_count = 0;
+double sum = 0;
+bool passed = true;
+float * cpu_res = vertex_float_val;
+
+for (int i = 0; i < v_num; ++ i) {
+    double dif;
+    sum += cpu_res[i];
+    if (cpu_res[i] > *(float *)&soc_res[i]) {
+        dif = cpu_res[i] - *(float *)&soc_res[i];
+        max_dif_id = max_dif > dif ? max_dif_id : i;
+        max_dif = max_dif > dif ? max_dif : dif;
+        sum_dif += dif;
+    } else {
+        dif = *(float *)&soc_res[i] - cpu_res[i];
+        max_dif_id = max_dif > dif ? max_dif_id : i;
+        max_dif = max_dif > dif ? max_dif : dif;
+        sum_dif += dif;
+    }
+    double deviation = 0;
+    if (cpu_res[i] != 0) {
+        deviation = dif / cpu_res[i];
+    } else {
+        deviation = dif;
+    }
+    max_deviation = max_deviation > deviation ? max_deviation : deviation;
+    if (deviation >= 0.02) {
+        cout << "i: " << i << ", deviation: " << deviation <<
+        ", spm: " << *(float *)&soc_res[i] << ", test: " << cpu_res[i];
+        passed = false;
+    }
+}
+cout << "Deviation = " << sum_dif / sum << endl;
+cout << "Err = " << err_count << endl;
+cout << "Sum_Dif = " << sum_dif << endl;
+cout << "Max_Id = " << max_dif_id << ", H_Value = " << cpu_res[max_dif_id] << ", ACC_Value = " << *(float *)&soc_res[max_dif_id] << ", Max_Dif = " << max_dif << endl;
+cout << "Max_Deviation_Id = " << max_deviation_id << ", Max_Deviation = " << max_deviation << endl;
+
+int ret = 0;
+cout << "PR summary: " << endl;
+if (passed) {
+    cout << "Page Rank passed on dataset " << dataset_dir << endl;
+} else {
+    cout << "Page Rank NOT passed on dataset " << dataset_dir << endl;
+    ret = -1;
+}
+
+int freq = 1000;
+cout << "iter: " << iter << endl;
+//cout << "freq: " << freq << " MHz" << endl;
+float gteps = pr_performance(m_simulator->get_total_soc_clks(), iter * e_num, freq * 1000 * 1000);
+cout << "traversed edges: " << iter * e_num << "\\ntotal cycles: " << m_simulator->get_total_soc_clks() << endl;
+cout << "PR Performance: " << gteps << " GTEPs" << endl;
+//cout << "Performance(include CPU DMA): " << pr_performance(m_simulator->get_total_clks(), iter * e_num, freq * 1000 * 1000) << " GTEPs" << endl;
+cout << "GTEPS/W: " << gteps / m_walt << endl;
+
+delete [] init_v;
+delete [] init_new_v;
+delete [] soc_res;
+
+return ret;
+`,
+      'gcn': `#include <iostream>
+#include "simulator.h"
+#include "graph_sdk/aas/aas.h"
+#include "graph_utils.h"
+#include "mm_utils.h"
+
+extern int total_send_e_task;
+
+#define CORE_NUM (SIMD_WIDTH)
+#define MAX_V_NUM 5000000
+#define MAX_SIMULATE_CYCLE 10000000000
+
+using namespace graph_mm;
+
+std::cout << "GCN data dir: " << dataset_dir << ", x1 file: " << x1_file << std::endl;
+// COO-format
+std::string core_adj_file = dataset_dir + std::string("adj_coords_values.txt");
+std::string core_w1_weight_file = dataset_dir + std::string("gcn_weights_W1_coords.txt");
+std::string core_w2_weight_file = dataset_dir + std::string("gcn_weights_W2_coords.txt");
+std::string core_X1_file = x1_file;
+
+// checked!
+SparseMatrix<float> * A = GCNUtil::LoadCooSparseMatrixWithProperty(core_adj_file, CSC_MATRIX);
+Eigen::MatrixXf * W1 = GCNUtil::LoadCooDenseMatrix(core_w1_weight_file, COO_COL_MATRIX);  // get col-major matrix
+Eigen::MatrixXf * W2 = GCNUtil::LoadCooDenseMatrix(core_w2_weight_file, COO_COL_MATRIX);  // get col-major matrix
+SparseMatrix<float> * X1 = GCNUtil::LoadCooSparseMatrixWithProperty(core_X1_file, CSC_MATRIX);
+
+std::cout << "A: rows=" << A->rows() << ", cols=" << A->cols() << std::endl;
+std::cout << "X1: rows=" << X1->rows() << ", cols=" << X1->cols() << std::endl;
+std::cout << "W1: rows=" << W1->rows() << ", cols=" << W1->cols() << std::endl;
+std::cout << "W2: rows=" << W2->rows() << ", cols=" << W2->cols() << std::endl;
+
+Eigen::MatrixXf * AXW1 = GCNUtil::GCNConv1(A, X1, W1);
+Eigen::MatrixXf * X2 = GCNUtil::DenseReLU(AXW1);
+Eigen::MatrixXf * AXW2 = GCNUtil::GCNConv2(A, X2, W2);
+Eigen::VectorX<Eigen::Index> * pred = GCNUtil::DenseArgMax(AXW2);
+
+std::cout << "X2: rows=" << X2->rows() << ", cols=" << X2->cols() << std::endl;
+std::cout << "X3: rows=" << AXW2->rows() << ", cols=" << AXW2->cols() << std::endl;
+std::cout << *AXW2 << std::endl;
+std::cout << "Pred: " << std::endl;
+std::cout << *pred << std::endl;
+
+std::cout << "A nnz: " << A->getENum() << std::endl;
+std::cout << "X1 nnz: " << X1->getENum() << std::endl;
+std::cout << "W1 cols: " << W1->cols() << std::endl;
+std::cout << "X2 nnz: " << X2->size() << std::endl;
+std::cout << "W2 cols: " << W2->cols() << std::endl;
+
+// 驱动图芯片进行计算
+std::string gcn_asm = std::string("../test/asm/testsuit/gcn_push_sync_dma_big.asm");
+std::string gcn_bin = std::string("../test/asm/bin/gcn_push_sync_dma_big.bin");
+m_simulator->parse_asm_to_bin(gcn_asm.c_str(), gcn_bin.c_str());
+
+// 要求：
+// GCN的规模不能超过限制，N, Feature, Channels均需要小于256K个数据, 而且A, X1, X2的非零元小于1M个
+// A需要是稀疏矩阵表示，非零元小于1M个
+// X1需要是稀疏矩阵表示, 非零元小于1M个
+// X2是稠密的(N * Channels < 1M)
+//
+// 实现说明:
+// X2 是第一轮的结果，虽然是稠密(N rows, Channels cols)，但需要生成CSC格式
+// lpddr中需要存放3个图和两个权重矩阵，A, X1, X2, 每个图需要放st, ed, edge_id, edge_val 4种数据
+// 由于GCN测试的图可能小于2^18个点，因此st,ed占用内存小于1MB，因此可以按这个来组织; edge_id和edge_val均小于4MB
+//      [0 4MB)               [4MB - 12MB)    [12MB - 16MB) [16MB - 18MB)      [18MB -             ]
+//       config, rsv          3组st, ed          W1的值        W2的值           3组edge_id, edge_val
+//
+// [0 4MB)范围为预留范围, 每个数据4bytes, 包含config, old_v和new_v
+// 配置信息占用[0 256B)范围，其意义如下：
+// 地址: [0      4      8       12        16       20       24      28       32       36    ------------------- 256Bytes)
+// 含义:  A_row, A_row, X1_row, X1_col,   W1_row,  W1_col,  X2_row, X2_col,  W2_row,  W2_col
+// 值:    N      N      N       feature   feature  channel  N       channel  channel  class
+// [1MB 2MB) [2MB 3MB) [3MB 4MB)
+// 0         old_v     new_v(最终计算结果)
+
+m_aas->wait_event(AAS_SOC_READY);
+printf("[Simulator]: SOC ready, begin to dma data\\n");
+
+// 1. 准备数据
+#if 0
+int N = 2708;
+int Features = 1433;
+int Channels = 32;
+int Classes = 7;
+#else
+int N = A->rows();
+int Features = W1->rows();
+int Channels = W1->cols();
+int Classes = W2->cols();
+printf("GCN on %s, N: %d, F: %d, Channel: %d, C: %d\\n", dataset_dir.c_str(), N, Features, Channels, Classes);
+#endif
+
+int config[64] = {0};   // config一共256bytes
+config[0] = N;
+config[1] = N;
+config[2] = N;
+config[3] = Features;
+config[4] = Features;
+config[5] = Channels;
+config[6] = N;
+config[7] = Channels;
+config[8] = Channels;
+config[9] = Classes;
+
+SparseMatrix<float>* X2_adj = graph_mm::GCNUtil::CreateSparseMatrixFromRowsAndCols(N, Channels, CSC_MATRIX);
+
+// copy config
+m_aas->dma_graph_data((char*)&config, 0, sizeof(int) * 64);
+m_aas->dma_set_data(1 * 1024 *1024, 3 * 1024 * 1024, 0);  // 将 [1MB -> 4MB)区域置0
+
+// A
+m_aas->dma_graph_data((char*)A->getOffsetStarts(), 4 * 1024 * 1024, sizeof(int) * A->getVNum());
+m_aas->dma_graph_data((char*)A->getOffsetEnds(), 5 * 1024 * 1024, sizeof(int) * A->getVNum());
+m_aas->dma_graph_data((char*)A->getEdgeIds(), 18 * 1024 * 1024, sizeof(int) * A->getENum());
+m_aas->dma_graph_data((char*)A->getEdgeVals(), 52 * 1024 * 1024, sizeof(int) * A->getENum());
+
+// X1
+m_aas->dma_graph_data((char*)X1->getOffsetStarts(), 6 * 1024 * 1024, sizeof(int) * X1->getVNum());
+m_aas->dma_graph_data((char*)X1->getOffsetEnds(), 7 * 1024 * 1024, sizeof(int) * X1->getVNum());
+m_aas->dma_graph_data((char*)X1->getEdgeIds(), 86 * 1024 * 1024, sizeof(int) * X1->getENum());
+m_aas->dma_graph_data((char*)X1->getEdgeVals(), 94 * 1024 * 1024, sizeof(int) * X1->getENum());
+
+// X2 adj
+m_aas->dma_graph_data((char*)X2_adj->getOffsetStarts(), 8 * 1024 * 1024, sizeof(int) * X2_adj->getVNum());
+m_aas->dma_graph_data((char*)X2_adj->getOffsetEnds(), 9 * 1024 * 1024, sizeof(int) * X2_adj->getVNum());
+m_aas->dma_graph_data((char*)X2_adj->getEdgeIds(), 102 * 1024 * 1024, sizeof(int) * X2_adj->getENum());
+
+// W1, 由于要按列的方式使用，需要W1是col-major的
+m_aas->dma_graph_data((char*)W1->data(), 12 * 1024 * 1024, sizeof(int) * W1->size());
+
+// W2, 由于要按列的方式使用，需要W2是col-major的
+m_aas->dma_graph_data((char*)W2->data(), 16 * 1024 * 1024, sizeof(int) * W2->size());
+
+// 2. 启动计算
+m_aas->start_kernel(gcn_bin.c_str());
+
+// 3. 等待计算完成
+m_aas->wait_event(AAS_SOC_KERNEL_DONE);
+
+// 4. 检测计算结果
+float *soc_res = new float[N * Classes];
+memset(soc_res, 0, sizeof(float) * N * Classes);
+m_aas->dma_from_lpddr((char*)soc_res, 180 * 1024 * 1024, sizeof(float) * N * Classes);
+
+/// @note 如果没有stop和等待，则由于多线程退出，会引起segment fault
+m_aas->stop_core();
+// 5. 等待本轮SOC模拟退出
+m_aas->wait_event(AAS_SOC_DONE);
+
+Eigen::MatrixXf *res_mat = new Eigen::MatrixXf(N, Classes);
+memcpy(res_mat->data(), soc_res, sizeof(float) * N * Classes);
+std::cout << "Res Mat: \\n" << *res_mat << std::endl;
+Eigen::VectorX<Eigen::Index> * soc_pred = GCNUtil::DenseArgMax(res_mat);
+
+int passed = true;
+int ret = 0;
+for (int i = 0; i < soc_pred->rows(); i++) {
+    for (int j = 0; j < soc_pred->cols(); j++) {
+        if (soc_pred->coeff(i, j) != pred->coeff(i, j)) {
+            passed = false;
+            printf("elem at (%d %d) result NOT right, cur: %d, exp: %d\\n",
+                i, j, soc_pred->coeff(i,j), pred->coeff(i,j));
+        }
+    }
+}
+std::cout << "A nnz: " << A->getENum() << std::endl;
+std::cout << "X1 nnz: " << X1->getENum() << std::endl;
+std::cout << "W1 cols: " << W1->cols() << std::endl;
+std::cout << "X2 nnz: " << AXW1->size() << std::endl;
+std::cout << "W2 cols: " << W2->cols() << std::endl;
+
+std::cout << "GCN summary: " << std::endl;
+if (passed) {
+    printf("GCN passed on %s\\n", dataset_dir.c_str());
+} else {
+    printf("GCN NOT passed on %s\\n", dataset_dir.c_str());
+    ret = -1;
+}
+int total_clks = m_simulator->get_total_soc_clks();
+
+int op = (A->getENum() * W1->cols() + X1->getENum() * W1->cols() +
+        A->getENum() * W2->cols() + AXW1->size() * W2->cols()) * 2;
+
+float gops = op * 1.0f / total_clks;
+std::cout << "total OPs: " << op
+    << "\\ntotal cycles: " << total_clks << "\\nGCN performance: " << gops << " GOPS" << std::endl;
+
+std::cout << "GOPS/W: " << gops / m_walt << std::endl;
+
+delete A;
+delete W1;
+delete W2;
+delete X1;
+delete X2;
+delete AXW1;
+delete AXW2;
+delete pred;
+
+delete X2_adj;
+delete [] soc_res;
+delete res_mat;
+delete soc_pred;
+return ret;
+`
     },
     'graph-ir': {
       'bfs': `// 这是BFS的GraphIR代码
@@ -2118,5 +3366,6 @@ class GCN(nn.Module):
 # 创建模型实例
 model = GCN(10, 16, 2)`
       }
-    }
+    },
+    
   };

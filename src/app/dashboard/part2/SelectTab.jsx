@@ -69,7 +69,7 @@ const SelectTab = ({
   // 保存原始代码的引用，用于重置
   const originalCodesRef = useRef({
     'device-cga': codeData['device-cga']['custom'],
-    'host-code': codeData['host-code']['default'],
+    'host-code': codeData['host-code'][selectedAlgorithm] || codeData['host-code']['default'],
     'graph-ir': codeData['graph-ir']['bfs'],
     'matrix-ir': codeData['matrix-ir']['bfs'], 
     'hardware-instruction': codeData['hardware-instruction']['bfs']
@@ -85,7 +85,8 @@ const SelectTab = ({
       { id: 'existing-framework', label: '现有图计算框架' },
       { id: 'graph-ir', label: 'GraphIR' },
       { id: 'matrix-ir', label: 'MatrixIR' },
-      { id: 'hardware-instruction', label: '硬件指令' }
+      { id: 'hardware-instruction', label: '硬件指令' },
+      { id: 'accelerator-obj', label: '加速卡obj' }
     ]
   }).current;
 
@@ -113,6 +114,16 @@ const SelectTab = ({
       algorithm: selectedExistingAlgorithm
     });
   }, [selectedFramework, selectedExistingAlgorithm, setFrameworkSelection]);
+
+  // 当算法变化时，更新originalCodesRef中的主机端代码
+  useEffect(() => {
+    if (selectedAlgorithm) {
+      originalCodesRef.current = {
+        ...originalCodesRef.current,
+        'host-code': codeData['host-code'][selectedAlgorithm] || codeData['host-code']['default']
+      };
+    }
+  }, [selectedAlgorithm]);
 
   // 获取选项卡索引
   const getTabIndex = (tab) => {
@@ -213,6 +224,11 @@ const SelectTab = ({
       return updatedIRCodes[codeType];
     }
 
+    // 特殊处理加速卡obj代码
+    if (codeType === 'accelerator-obj') {
+      return codeData['bin'];
+    }
+
     // 特殊处理模板代码
     if (codeType === 'device-cga' && algorithm === 'custom') {
       // 如果存在已编辑的模板代码，返回它
@@ -227,7 +243,8 @@ const SelectTab = ({
     if (codeType === 'device-cga') {
       return codeData[codeType][algorithm || 'custom'];
     } else if (codeType === 'host-code') {
-      return codeData[codeType]['default'];
+      // 尝试获取当前选定算法的主机端代码，如果不存在则使用default
+      return codeData[codeType][algorithm] || codeData[codeType]['default'];
     } else if (['graph-ir', 'matrix-ir', 'hardware-instruction'].includes(codeType)) {
       // 如果算法是'custom'(模版)，则显示对应的模版IR代码
       if (algorithm === 'custom' && codeData[codeType]['custom']) {
@@ -313,7 +330,7 @@ const SelectTab = ({
 
   // 渲染选项卡的内容
   const renderTabContent = (tabType, isAnimated) => {
-    switch(tabType) {
+    switch (tabType) {
       case 'device-cga':
         return (
           <CodeDisplay 
@@ -332,7 +349,7 @@ const SelectTab = ({
       case 'host-code':
         return (
           <CodeDisplay 
-            code={getCodeContent('host-code')} 
+            code={editedCodes['host-code'] || getCodeContent('host-code')} 
             onCodeChange={(newCode) => handleCodeChange(newCode, 'host-code')}
             language="cpp"
             animated={false}
@@ -401,14 +418,23 @@ const SelectTab = ({
         
       case 'hardware-instruction':
         return (
-          <CodeDisplay 
-            code={getCodeContent('hardware-instruction')} 
+          <CodeDisplay
+            code={getCodeContent('hardware-instruction')}
             onCodeChange={(newCode) => handleCodeChange(newCode, 'hardware-instruction')}
             language="hardware"
             animated={isAnimated}
           />
         );
-        
+
+      case 'accelerator-obj':
+        return (
+          <CodeDisplay
+            code={getCodeContent('accelerator-obj')}
+            language="text"
+            animated={true}
+          />
+        );
+
       default:
         return <Typography>内容不可用</Typography>;
     }

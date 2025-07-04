@@ -588,19 +588,30 @@ export default function Page() {
             <Tooltip 
               formatter={(value, name, props) => {
                 if (chartMetric === 'throughput') {
-                  return [`${value.toFixed(3)} ${getThroughputUnit(props.payload.algorithm)}`, name];
+                  if (name === "CPU（Intel Xeon Gold 6338）吞吐量") {
+                    return [`${Number(value).toFixed(3)} ${getThroughputUnit(props.payload.algorithm)}`, name];
+                  }
+                  if (name === "加速器吞吐量") {
+                    // 计算吞吐量加速比
+                    const throughputSpeedup = value / props.payload.cpuThroughput;
+                    return [
+                      <span>
+                        {Number(value).toFixed(3)} {getThroughputUnit(props.payload.algorithm)}<br/>
+                        <Box sx={{ height: 12 }} />
+                        <span style={{color: '#CC556A', fontWeight: 'bold'}}>吞吐量加速比: {throughputSpeedup.toFixed(3)}</span>
+                      </span>,
+                      name
+                    ];
+                  }
                 }
                 if (chartMetric === 'time' && name === "CPU（Intel Xeon Gold 6338）时间") {
-                  // 同时显示CPU时间和加速比
-                  return [value.toFixed(3), name];
+                  return [Number(value).toFixed(3), name];
                 }
                 if (chartMetric === 'time' && name === "加速器时间") {
-                  // 计算并显示加速比
                   const speedUp = props.payload.cpu / value;
                   return [
                     <span>
-                      {value.toFixed(3)}<br/>
-                      {/* 加一个可以修改高度的换行 */}
+                      {Number(value).toFixed(3)}<br/>
                       <Box sx={{ height: 12 }} />
                       <span style={{color: '#CC556A', fontWeight: 'bold'}}>加速比: {speedUp.toFixed(3)}</span>
                     </span>, 
@@ -616,7 +627,14 @@ export default function Page() {
                 return label;
               }}
             />
-            <Legend wrapperStyle={{ paddingTop: '20px' }} />
+            <Legend 
+              wrapperStyle={{ paddingTop: '10px' }}
+              formatter={(value, entry, index) => (
+                <span style={{ marginRight: index === 0 ? '100px' : '0px' }}>
+                  {value}
+                </span>
+              )}
+            />
 
             {chartMetric === 'time' && (
                 <>
@@ -642,7 +660,7 @@ export default function Page() {
                 <Bar
                   dataKey="cpuThroughput"
                   fill="#9e9e9e"
-                  name="CPU吞吐量"
+                  name="CPU（Intel Xeon Gold 6338）吞吐量"
                   barSize={50}
                   onMouseEnter={() => setShowReferenceLine(true)}
                   onMouseLeave={() => setShowReferenceLine(false)}
@@ -654,6 +672,26 @@ export default function Page() {
                   barSize={50}
                   onMouseEnter={() => setShowReferenceLine(true)}
                   onMouseLeave={() => setShowReferenceLine(false)}
+                />
+                <Tooltip 
+                  formatter={(value, name, props) => {
+                    if (name === "CPU（Intel Xeon Gold 6338）吞吐量") {
+                      return [`${Number(value).toFixed(3)} ${getThroughputUnit(props.payload.algorithm)}`, name];
+                    }
+                    if (name === "加速器吞吐量") {
+                      // 计算吞吐量加速比
+                      const throughputSpeedup = value / props.payload.cpuThroughput;
+                      return [
+                        <span>
+                          {Number(value).toFixed(3)} {getThroughputUnit(props.payload.algorithm)}<br/>
+                          <Box sx={{ height: 12 }} />
+                          <span style={{color: '#CC556A', fontWeight: 'bold'}}>吞吐量加速比: {throughputSpeedup.toFixed(3)}</span>
+                        </span>,
+                        name
+                      ];
+                    }
+                    return [value, name];
+                  }}
                 />
                 <ReferenceLine
                   y={midtermMetrics[selectedAlgo]}

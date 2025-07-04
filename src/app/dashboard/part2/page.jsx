@@ -93,6 +93,8 @@ const Page = () => {
   const [simulatorResults, setSimulatorResults] = useState('');
   const [selectedFramework, setSelectedFramework] = useState('');
   const [cgaAnimationEnabled, setCgaAnimationEnabled] = useState(false);
+  // 添加状态存储g++代码
+  const [gppCode, setGppCode] = useState('');
   
   // 框架转换 添加保存框架选择和算法选择的状态
   const [frameworkSelection, setFrameworkSelection] = useState({
@@ -112,10 +114,10 @@ const Page = () => {
   // 添加一个状态来控制右侧面板的隐藏
   const [hidePanelsAfterSave, setHidePanelsAfterSave] = useState(false);
 
-  // 初始化时设置默认算法和数据集
+  // FIXME 这个是干啥用的啊？ 初始化时设置默认算法和数据集
   useEffect(() => {
     // 设置默认算法为bfs
-    const defaultAlgorithm = 'bfs';
+    const defaultAlgorithm = 'ppr';
     setSelectedAlgorithm(defaultAlgorithm);
     
     // 设置默认数据集为算法的第一个可用数据集
@@ -212,9 +214,14 @@ const Page = () => {
   // 处理流程图中模块的点击事件
   const handleModuleClick = (module) => {
     // 除了"exe执行"外的其他按钮点击时，如果界面在底部，则滑回顶部
-    if (module !== 'exe执行' && showBottomPanels) {
+    if (module !== 'exe执行' && module !== 'g++' && showBottomPanels) {
       setShowBottomPanels(false);
       return;
+    }
+
+    // 清除g++代码，除非正在点击g++按钮
+    if (module !== 'g++') {
+      setGppCode('');
     }
 
     switch (module) {
@@ -285,12 +292,28 @@ const Page = () => {
         // 添加到可见IR选项卡
         setVisibleIRTabs(prev => [...new Set([...prev, 'hardware-instruction'])]);
         break;
+      case '加速卡object':
+        setShowRightPanel(true);
+        setActiveTab('accelerator-obj');
+        setAnimatedTabs(prev => [...new Set([...prev, 'accelerator-obj'])]);
+        // 添加到可见IR选项卡
+        setVisibleIRTabs(prev => [...new Set([...prev, 'accelerator-obj'])]);
+        break;
       case '主机端代码':
         setShowMiddlePanel(true);
         setActiveTab('host-code');
         break;
+      case 'g++':
+        // 设置g++代码并显示底部面板
+        setShowBottomPanels(true); // 显示底部面板以查看g++代码
+        // 等待1s后设置g++代码
+        setTimeout(() => {
+          setGppCode(codeData['g++'] || '// g++ code not found');
+        }, 500);
+        break;
       case 'exe执行':
         // 执行程序
+        setGppCode(''); // 清除g++代码
         handleRun(selectedAlgorithm, selectedDataset, selectedFramework, showBottomPanels, setShowBottomPanels, generateChartData, editedCodes);
         break;
       default:
@@ -355,13 +378,13 @@ const Page = () => {
                         onChange={handleAlgorithmChange}
                         sx={{ fontSize: '1.1rem' }}
                       >
+                        <MenuItem value="ppr">PPR</MenuItem>
+                        <MenuItem value="kclique">K-Clique</MenuItem>
+                        <MenuItem value="gcn">GCN</MenuItem>
                         <MenuItem value="bfs">BFS</MenuItem>
+                        <MenuItem value="kcore">K-Core</MenuItem>
                         <MenuItem value="sssp">SSSP</MenuItem>
                         <MenuItem value="wcc">WCC</MenuItem>
-                        <MenuItem value="kcore">K-Core</MenuItem>
-                        <MenuItem value="kclique">K-Clique</MenuItem>
-                        <MenuItem value="ppr">PPR</MenuItem>
-                        <MenuItem value="gcn">GCN</MenuItem>
                         <MenuItem value="custom">模版</MenuItem>
                         <MenuItem value="framework">框架转换生成</MenuItem>
                       </Select>
@@ -494,30 +517,44 @@ const Page = () => {
                     fontSize: '0.8rem',
                   }} 
                   ref={resultsBoxRef}>
-                    {/* 这里放置日志内容，添加特定行的颜色高亮 */}
+                    {/* 这里放置日志内容或g++代码 */}
                     <pre>
-                      {results.terminalOutput 
-                        ? results.terminalOutput.split('\n').map((line, index) => {
-                            // 匹配成功和通过的行，添加绿色
-                            if (line.includes('[       OK ]') || 
-                                line.includes('[  PASSED  ]') ||
-                                line.includes('freq=1000 MHz')) {
+                      {gppCode ? 
+                        // 如果有g++代码，显示代码
+                        gppCode
+                        :
+                        // 否则显示正常的日志内容
+                        (results.terminalOutput 
+                          ? results.terminalOutput.split('\n').map((line, index) => {
+                              // 匹配成功和通过的行，添加绿色
+                              if (line.includes('[       OK ]') || 
+                                  line.includes('[  PASSED  ]') ||
+                                  line.includes('total cycles') ||
+                                  line.includes('total OPs') ||
+                                  line.includes('performance') ||
+                                  line.includes('Performance') ||
+                                  line.includes('traversed') ||
+                                  line.includes('GTSPS/W') ||
+                                  line.includes('GTEPS/W') ||
+                                  line.includes('GOPS/W') ||
+                                  line.includes('freq=1000 MHz')) {
+                                return (
+                                  <div key={index} style={{ 
+                                    color: '#4caf50',
+                                    fontWeight: 'bold'
+                                    }}>
+                                    {line}
+                                  </div>
+                                );
+                              }
                               return (
-                                <div key={index} style={{ 
-                                  color: '#4caf50',
-                                  fontWeight: 'bold'
-                                  }}>
+                                <div key={index}>
                                   {line}
                                 </div>
                               );
-                            }
-                            return (
-                              <div key={index}>
-                                {line}
-                              </div>
-                            );
-                          })
-                        : '日志内容将在这里显示...'
+                            })
+                          : '日志内容将在这里显示...'
+                        )
                       }
                     </pre>
                   </Box>

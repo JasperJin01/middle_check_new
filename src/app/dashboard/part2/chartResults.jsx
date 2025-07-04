@@ -351,8 +351,8 @@ export const defaultPerformanceValues = {
     },
     'smallgraph': {
       performance: {
-        '150MHz': 3.0,
-        '1000MHz': 20.0
+        '150MHz': 0.013,
+        '1000MHz': 0.089
       },
       consumption: 0.8,
       target: {
