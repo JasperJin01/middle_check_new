@@ -4,6 +4,8 @@
 
 **【运行项目】**
 
+NOTE：page4是项目中期指标性能测试，需要把视频放middle_check.mp4放到public文件夹中。
+
 1. 安装node.js ~~16.15.1 版本~~ 和 最新的npm
 2. 安装依赖： `npm install --legacy-peer-deps`（不加 --legacy-peer-deps 会有依赖冲突报错）
 3. 运行项目：

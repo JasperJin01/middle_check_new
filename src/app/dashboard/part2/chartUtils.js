@@ -72,9 +72,10 @@ export const getYAxisUnit = (algorithm, metricType) => {
  * @param {string} params.selectedDataset - 选择的数据集
  * @param {Array} params.chartData - 当前图表数据
  * @param {Object} params.lastExecutedData - 最后执行的数据
+ * @param {Object} params.performanceData - 从执行日志中解析出的性能数据
  * @returns {Object} - 包含新图表数据和最后执行的数据
  */
-export const generateChartData = ({ selectedAlgorithm, selectedDataset, chartData = [], lastExecutedData = {} }) => {
+export const generateChartData = ({ selectedAlgorithm, selectedDataset, chartData = [], lastExecutedData = {}, performanceData = null }) => {
   // 如果没有选择算法或是自定义/框架转换，不生成数据
   if (!selectedAlgorithm || selectedAlgorithm === 'custom' || selectedAlgorithm === 'framework') {
     console.log('不生成图表数据: 无算法或是自定义/框架转换');
@@ -87,7 +88,13 @@ export const generateChartData = ({ selectedAlgorithm, selectedDataset, chartDat
     return { newChartData: [], newLastExecutedData: lastExecutedData };
   }
   
-  console.log('开始生成图表数据:', { selectedAlgorithm, selectedDataset });
+  console.log('开始生成图表数据:', { 
+    selectedAlgorithm, 
+    selectedDataset, 
+    performanceData,
+    isSpecialAlgo: isSpecialAlgorithm(selectedAlgorithm),
+    isRmatDataset: isRmatDataset(selectedDataset)
+  });
   
   // 初始化性能数据变量
   let performanceValue = 0;
@@ -103,8 +110,24 @@ export const generateChartData = ({ selectedAlgorithm, selectedDataset, chartDat
   const specialAlgo = isSpecialAlgorithm(selectedAlgorithm);
   const rmatDataset = isRmatDataset(selectedDataset);
   
-  // 先检查chartResults中是否有对应算法和数据集的数据
-  if (chartResults[selectedAlgorithm] && chartResults[selectedAlgorithm][selectedDataset]) {
+  // 如果有从执行日志中解析出的性能数据，且不是特殊算法或不是RMAT数据集，使用解析出的数据
+  if (performanceData !== null && (!specialAlgo || !rmatDataset)) {
+    console.log('使用执行日志中的性能数据:', performanceData);
+    performanceValue = performanceData;
+    ptargetValue = 3;
+    consumptionValue = performanceValue / 3; // 假设功耗比为性能的1/3
+    ctargetValue = 8;
+    
+    console.log('设置性能值:', {
+      performanceValue,
+      ptargetValue,
+      consumptionValue,
+      ctargetValue
+    });
+  }
+  // 否则使用预设数据或默认值
+  else if (chartResults[selectedAlgorithm] && chartResults[selectedAlgorithm][selectedDataset]) {
+    console.log('使用预设数据');
     const resultData = chartResults[selectedAlgorithm][selectedDataset];
     performanceValue = resultData.find(item => item.key.includes('性能('))?.value || 0;
     ptargetValue = resultData.find(item => item.key.includes('性能指标要求'))?.value || 3;

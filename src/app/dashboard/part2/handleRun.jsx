@@ -38,6 +38,15 @@ const request = {
   BASE_URL: 'http://10.11.74.113:8000' // 这里需要替换为实际的后端URL
 };
 
+// 解析性能数据的函数
+const parsePerformance = (logLine) => {
+  const match = logLine.match(/\[Simulator\]: freq=1000 MHz, \w+ performance: ([\d.]+) \w+/);
+  if (match) {
+    return parseFloat(match[1]);
+  }
+  return null;
+};
+
 // 创建handleRun函数
 const useHandleRun = (algorithmMappings) => {
   const [isRunning, setIsRunning] = useState(false);
@@ -59,6 +68,7 @@ const useHandleRun = (algorithmMappings) => {
     
     setIsRunning(true);
     setResults({ terminalOutput: 'Connecting to server...\n' });
+    let performanceValue = null;
 
     try {
       // 检查CGA代码是否被编辑过
@@ -143,7 +153,7 @@ const useHandleRun = (algorithmMappings) => {
           
           // 执行完成后才生成图表数据
           if (typeof generateChartData === 'function') {
-            generateChartData();
+            generateChartData(performanceValue);
           }
           
           setIsRunning(false);
@@ -156,6 +166,12 @@ const useHandleRun = (algorithmMappings) => {
           }));
           setIsRunning(false);
         } else {
+          // 解析性能数据
+          const value = parsePerformance(event.data);
+          if (value !== null) {
+            performanceValue = value;
+          }
+          
           setResults(prev => ({
             ...prev,
             terminalOutput: prev.terminalOutput + event.data + '\n'

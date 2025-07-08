@@ -51,6 +51,13 @@ const customPrismStyles = `
     -moz-tab-size: 4 !important;
   }
   
+  /* 修改注释的颜色为绿色 */
+  .token.comment {
+    color: #4aa467 !important;
+    font-weight: bold !important;
+    font-style: normal !important;
+  }
+  
   .editor-textarea {
     position: absolute;
     top: 0;

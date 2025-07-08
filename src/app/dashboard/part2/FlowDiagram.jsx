@@ -19,7 +19,7 @@ const FlowDiagram = ({ onModuleClick }) => {
     '主机端代码': { x: 348, y: 93, width: 126, height: 36 },
     'g++': { x: 353, y: 212, width: 114, height: 36 },
     '加速卡object': { x: 141, y: 384, width: 114, height: 36 },
-    // 'Linker': { x: 277, y: 387, width: 66, height: 28.8 },
+    'Linker': { x: 277, y: 387, width: 66, height: 28.8 },
     '转换': { x: 182, y: 94, width: 42, height: 39.6 },
     '现有图计算框架': { x: 249, y: 91, width: 74.4, height: 39.6 },
     'exe执行': { x: 375, y: 431, width: 64.8, height: 28.8 }

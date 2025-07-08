@@ -374,7 +374,6 @@ class BFSKernel(GraphTraversalKernel):
     self.depth = min(self.depth, self.CGAprop.res)
     return self.depth`,
 
-
       'sssp': `# 这里是SSSP的CGA代码
 from graph_dsl import * 
 
@@ -409,7 +408,6 @@ class SSSPKernel(GraphTraversalKernel):
     self.dis = min(self.dis, self.CGAprop.res)
     return self.dis`,
 
-    
       'wcc': `# 这里是WCC的CGA代码
 from graph_dsl import * 
 
@@ -440,7 +438,6 @@ class WCCKernel(GraphTraversalKernel):
   def apply(self):
     self.prop = min(self.prop, self.CGAprop.res)
     return self.prop`,
-
 
       'kcore': `# 这里是K-Core的CGA代码
 from graph_dsl import *
@@ -481,7 +478,6 @@ class KcoreKernel(GraphTraversalKernel):
     self.degree = self.degree - self.CGAprop.res
     return self.degree`,
 
-    
       'kclique': `# 这里是K-Clique的CGA代码
 from graph_dsl import *
 

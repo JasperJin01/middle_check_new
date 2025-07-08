@@ -213,8 +213,11 @@ const Page = () => {
   
   // 处理流程图中模块的点击事件
   const handleModuleClick = (module) => {
-    // 除了"exe执行"外的其他按钮点击时，如果界面在底部，则滑回顶部
-    if (module !== 'exe执行' && module !== 'g++' && showBottomPanels) {
+    // 除了"exe执行"、"g++"和"Linker"外的其他按钮点击时，如果界面在底部，则滑回顶部
+    if (module !== 'exe执行' &&
+       module !== 'g++' && 
+       module !== 'Linker' && 
+       showBottomPanels) {
       setShowBottomPanels(false);
       return;
     }
@@ -311,6 +314,66 @@ const Page = () => {
           setGppCode(codeData['g++'] || '// g++ code not found');
         }, 500);
         break;
+      case 'Linker':
+        setShowBottomPanels(true);
+        setGppCode(''); // 先清空代码
+        
+        // 根据选择的算法确定日志文件名
+        const getLogFileName = (algo) => {
+          const algoMap = {
+            'bfs': 'BFS',
+            'sssp': 'SSSP',
+            'wcc': 'WCC',
+            'kcore': 'kcore',
+            'kclique': 'kclique',
+            'ppr': 'PPR',
+            'gcn': 'GCN'
+          };
+          return `build_${algoMap[algo]}.log`;
+        };
+
+        // 读取日志文件
+        fetch(`/dashboard/part2/buildlog/${getLogFileName(selectedAlgorithm)}`)
+          .then(response => response.text())
+          .then(logContent => {
+            const lines = logContent.split('\n');
+            let currentLine = 0;
+            
+            // 每20ms显示4行
+            const interval = setInterval(() => {
+              if (currentLine < lines.length) {
+                // 获取接下来的4行（或剩余的行数，如果不足4行）
+                const nextLines = lines.slice(currentLine, currentLine + 4).map((line, index) => {
+                  // 检查是否是最后三行
+                  const isLastThreeLines = currentLine + index >= lines.length - 4;
+                  if (isLastThreeLines) {
+                    // 为最后三行添加样式
+                    return `<span style="color: #4caf50; font-weight: bold;">${line}</span>`;
+                  }
+                  return line;
+                }).join('\n');
+                
+                setGppCode(prev => prev + nextLines + '\n');
+                currentLine += 4;
+                
+                // 只在内容还在继续时滚动
+                if (currentLine < lines.length) {
+                  scrollToBottom();
+                }
+              } else {
+                clearInterval(interval);
+                // 确保所有内容都渲染完后，延迟一点再进行最后的滚动
+                setTimeout(() => {
+                  scrollToBottom();
+                }, 50);
+              }
+            }, 20);
+          })
+          .catch(error => {
+            console.error('Error reading log file:', error);
+            setGppCode('Error: Unable to load build log');
+          });
+        break;
       case 'exe执行':
         // 执行程序
         setGppCode(''); // 清除g++代码
@@ -322,13 +385,14 @@ const Page = () => {
   };
 
   // 使用chartUtils中的函数生成图表数据
-  const generateChartData = () => {
+  const generateChartData = (performanceData = null) => {
     // 调用工具函数生成图表数据
     const { newChartData, newLastExecutedData } = generateChartDataUtil({
       selectedAlgorithm,
       selectedDataset,
       chartData,
-      lastExecutedData
+      lastExecutedData,
+      performanceData
     });
     
     // 更新图表数据和最后执行的数据
@@ -521,7 +585,7 @@ const Page = () => {
                     <pre>
                       {gppCode ? 
                         // 如果有g++代码，显示代码
-                        gppCode
+                        <div dangerouslySetInnerHTML={{ __html: gppCode }} />
                         :
                         // 否则显示正常的日志内容
                         (results.terminalOutput 
