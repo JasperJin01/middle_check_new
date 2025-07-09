@@ -2,6 +2,7 @@ import { Box, IconButton, Tooltip, LinearProgress, Typography } from '@mui/mater
 import SaveIcon from '@mui/icons-material/Save';
 import { useState, useEffect, useRef } from 'react';
 import Prism from 'prismjs';
+import request from '@/lib/request/request';
 
 // 引入 Prism 的浅色主题样式
 import 'prismjs/themes/prism.css';
@@ -127,8 +128,6 @@ const customPrismStyles = `
   }
 `;
 
-// 基础URL
-const BASE_URL = 'http://10.11.74.113:8000';
 
 // 算法和数据集映射
 const algorithmMappings = {
@@ -380,7 +379,7 @@ const CodeDisplay = ({
 
       // 步骤1: 将修改后的CGA代码写入后端
       const algorithmUrl = algorithmMappings[algorithm]?.url || algorithm;
-      const writeUrl = `${BASE_URL}/part3/write/1/${algorithmUrl}/`;
+      const writeUrl = `${request.BASE_URL}/part3/write/1/${algorithmUrl}/`;
       console.log(`调用API: ${writeUrl}`);
       
       const writeResponse = await fetch(writeUrl, {
@@ -401,7 +400,7 @@ const CodeDisplay = ({
       
       // 步骤2: 执行代码 - 处理流式响应
       const actualDataset = dataset || 'nodataset';
-      const executeUrl = `${BASE_URL}/part3/execute/1/${algorithm}/${actualDataset}/`;
+      const executeUrl = `${request.BASE_URL}/part3/execute/1/${algorithm}/${actualDataset}/`;
       console.log(`调用API: ${executeUrl}`);
       
       // 获取响应但不立即等待其完成
@@ -451,7 +450,7 @@ const CodeDisplay = ({
       setProgress(90);
       
       // 步骤3: 获取执行结果
-      const resultUrl = `${BASE_URL}/part3/result/1/${algorithm}/`;
+      const resultUrl = `${request.BASE_URL}/part3/result/1/${algorithm}/`;
       console.log(`调用API: ${resultUrl}`);
       
       const resultResponse = await fetch(resultUrl);

@@ -1,6 +1,6 @@
 // 基础配置
 // 公网穿透映射后端（用于公网展示时）
-export const BASE_URL = 'http://10.11.74.113:8000'
+export const BASE_URL = 'http://10.11.72.94:8000'
 
 
 // 通用请求封装

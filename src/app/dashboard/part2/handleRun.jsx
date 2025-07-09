@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { codeData } from './codeData';
+import request from '@/lib/request/request';
 
 // 示例代码，在网络请求失败时使用
 const sampleCodes = {
@@ -33,10 +34,6 @@ const sampleCodes = {
   }
 };
 
-// 导入请求工具
-const request = {
-  BASE_URL: 'http://10.11.74.113:8000' // 这里需要替换为实际的后端URL
-};
 
 // 解析性能数据的函数
 const parsePerformance = (logLine) => {

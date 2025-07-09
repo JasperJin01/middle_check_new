@@ -38,10 +38,6 @@ import {
 import ChartDisplay from './ChartDisplay';
 
 
-// 导入请求工具
-const request = {
-  BASE_URL: 'http://10.11.74.113:8000' // 这里需要替换为实际的后端URL
-};
 
 // 算法和数据集映射
 const algorithmMappings = {
