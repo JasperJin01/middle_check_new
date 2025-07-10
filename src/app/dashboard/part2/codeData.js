@@ -708,10 +708,10 @@ for (int i = 0; i < v_num; i++)
 }
 kc_push(v_num, edge_new, off_new, cpu_res);
 ///home/work/hjq/cycle-accurate-sim/test/asm/asm_compiler/kc.asm
-std::string bfs_asm = std::string("../test/asm_test/GraphTraversal/kc_test.asm");
-std::string bfs_bin = std::string("../test/asm_test/GraphTraversal/kc_test.bin");
+std::string kc_asm = std::string("../test/asm_test/GraphTraversal/kc_test.asm");
+std::string kc_bin = std::string("../test/asm_test/GraphTraversal/kc_test.bin");
 
-m_simulator->parse_asm_to_bin(bfs_asm.c_str(), bfs_bin.c_str());
+m_simulator->parse_asm_to_bin(kc_asm.c_str(), kc_bin.c_str());
 
 m_aas->wait_event(AAS_SOC_READY);
 printf("[Simulator]: SOC ready, begin to dma data\\n");
@@ -731,7 +731,7 @@ m_aas->dma_graph_data((char *)(soc_old), 16 * 1024 * 1024, sizeof(int) * (v_num)
 m_aas->dma_graph_data((char *)edge_new, 24 * 1024 * 1024, sizeof(int) * e_num * 2); // edge
 
 // 2. 启动计算
-m_aas->start_kernel(bfs_bin.c_str());
+m_aas->start_kernel(kc_bin.c_str());
 
 // 3. 等待计算完成
 m_aas->wait_event(AAS_SOC_KERNEL_DONE);
@@ -761,17 +761,17 @@ for (int i = 0; i < v_num; i++)
 if (passed)
 {
     int freq = 150;
-    printf("[Simulator]: bfs passed\\n");
-    printf("[Simulator]: bfs core start clk: %d\\n", m_simulator->_core_start_clk);
-    printf("[Simulator]: bfs core end clk: %d\\n", m_simulator->_core_end_clk);
-    printf("[Simulator]: bfs do edge task: %d\\n", total_send_e_task);
-    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+    printf("[Simulator]: kc passed\\n");
+    printf("[Simulator]: kc core start clk: %d\\n", m_simulator->_core_start_clk);
+    printf("[Simulator]: kc core end clk: %d\\n", m_simulator->_core_end_clk);
+    printf("[Simulator]: kc do edge task: %d\\n", total_send_e_task);
+    printf("[Simulator]: freq=%d MHz, kc performance: %f GTeps\\n", freq, _gu.kc_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
     freq = 1000;
-    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+    printf("[Simulator]: freq=%d MHz, kc performance: %f GTeps\\n", freq, _gu.kc_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
 }
 else
 {
-    printf("[Simulator]: bfs NOT passed\\n");
+    printf("[Simulator]: kc NOT passed\\n");
 }
 printf("CPU result: \\n");
 for (int i = 0; i < v_num; i++)
@@ -788,8 +788,7 @@ printf("KC res : \\n");
 if (passed)
 {
     Print_KC(v_num, soc_new);
-}
-`,
+}`,
       'kcore': `#include <iostream>
 #include "simulator.h"
 #include "graph_sdk/aas/aas.h"
@@ -970,10 +969,10 @@ for (int i = 0; i < v_num; i++)
 }
 wcc_push(v_num, edge_new, off_new, cpu_res);
 ///home/work/hjq/cycle-accurate-sim/test/asm/asm_compiler/wcc.asm
-std::string bfs_asm = std::string("../test/asm_test/GraphTraversal/wcc_test.asm");
-std::string bfs_bin = std::string("../test/asm_test/GraphTraversal/wcc_test.bin");
+std::string wcc_asm = std::string("../test/asm_test/GraphTraversal/wcc_test.asm");
+std::string wcc_bin = std::string("../test/asm_test/GraphTraversal/wcc_test.bin");
 
-m_simulator->parse_asm_to_bin(bfs_asm.c_str(), bfs_bin.c_str());
+m_simulator->parse_asm_to_bin(wcc_asm.c_str(), wcc_bin.c_str());
 
 m_aas->wait_event(AAS_SOC_READY);
 printf("[Simulator]: SOC ready, begin to dma data\\n");
@@ -993,7 +992,7 @@ m_aas->dma_graph_data((char *)(soc_old), 16 * 1024 * 1024, sizeof(int) * (v_num)
 m_aas->dma_graph_data((char *)edge_new, 24 * 1024 * 1024, sizeof(int) * e_num * 2); // edge
 
 // 2. 启动计算
-m_aas->start_kernel(bfs_bin.c_str());
+m_aas->start_kernel(wcc_bin.c_str());
 
 // 3. 等待计算完成
 m_aas->wait_event(AAS_SOC_KERNEL_DONE);
@@ -1023,17 +1022,17 @@ for (int i = 0; i < v_num; i++)
 if (passed)
 {
     int freq = 150;
-    printf("[Simulator]: bfs passed\\n");
-    printf("[Simulator]: bfs core start clk: %d\\n", m_simulator->_core_start_clk);
-    printf("[Simulator]: bfs core end clk: %d\\n", m_simulator->_core_end_clk);
-    printf("[Simulator]: bfs do edge task: %d\\n", total_send_e_task);
-    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+    printf("[Simulator]: wcc passed\\n");
+    printf("[Simulator]: wcc core start clk: %d\\n", m_simulator->_core_start_clk);
+    printf("[Simulator]: wcc core end clk: %d\\n", m_simulator->_core_end_clk);
+    printf("[Simulator]: wcc do edge task: %d\\n", total_send_e_task);
+    printf("[Simulator]: freq=%d MHz, wcc performance: %f GTeps\\n", freq, _gu.wcc_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
     freq = 1000;
-    printf("[Simulator]: freq=%d MHz, bfs performance: %f GTeps\\n", freq, _gu.bfs_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
+    printf("[Simulator]: freq=%d MHz, wcc performance: %f GTeps\\n", freq, _gu.wcc_performance(m_simulator->_core_end_clk - m_simulator->_core_start_clk, total_send_e_task, freq * 1000 * 1000));
 }
 else
 {
-    printf("[Simulator]: bfs NOT passed\\n");
+    printf("[Simulator]: wcc NOT passed\\n");
 }
 printf("CPU result: \\n");
 for (int i = 0; i < v_num; i++)

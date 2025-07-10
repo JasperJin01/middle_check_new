@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useState } from 'react';
 import RouterLink from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
@@ -14,11 +14,17 @@ import type { NavItemConfig } from '@/types/nav';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
 import { Logo } from '@/components/core/logo';
 import { CaretDown, CaretUp } from '@phosphor-icons/react';
+import { paths } from '@/paths';
 
 import { navItems } from './config';
 
 export function SideNav(): React.JSX.Element {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogoClick = () => {
+    router.push(paths.dashboard.overview);
+  };
 
   return (
     <Box
@@ -51,7 +57,19 @@ export function SideNav(): React.JSX.Element {
       }}
     >
       {/* 左侧项目信息 */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: '300px' }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2, 
+          minWidth: '300px',
+          cursor: 'pointer',
+          '&:hover': {
+            opacity: 0.8
+          }
+        }}
+        onClick={handleLogoClick}
+      >
         <Logo color="light" height={32} width={32} />
         <Box>
           <Typography sx={{color: '#BAB8B8', fontSize: '12px'}}>
