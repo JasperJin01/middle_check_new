@@ -289,8 +289,8 @@ export const defaultPerformanceValues = {
     },
     'euroroad': {
       performance: {
-        '150MHz': 5.0,
-        '1000MHz': 33.0
+        '150MHz': 0.6609,
+        '1000MHz': 0.905
       },
       consumption: 1.2,
       target: {
@@ -301,8 +301,8 @@ export const defaultPerformanceValues = {
     },
     'physics': {
       performance: {
-        '150MHz': 6.0,
-        '1000MHz': 40.0
+        '150MHz': 0.7448,
+        '1000MHz': 0.7729
       },
       consumption: 1.5,
       target: {

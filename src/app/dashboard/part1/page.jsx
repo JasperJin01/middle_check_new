@@ -575,148 +575,139 @@ export default function Page() {
                   </Tabs>
 
                   <BarChart
-            width={800}
-            height={300}
-            data={getChartData()}
-            margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-            onMouseEnter={() => setShowReferenceLine(true)}
-            onMouseLeave={() => setShowReferenceLine(false)}
-        >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="displayName" />
-            <YAxis />
-            <Tooltip 
-              formatter={(value, name, props) => {
-                if (chartMetric === 'throughput') {
-                  if (name === "CPU（Intel Xeon Gold 6338）吞吐量") {
-                    return [`${Number(value).toFixed(3)} ${getThroughputUnit(props.payload.algorithm)}`, name];
-                  }
-                  if (name === "加速器吞吐量") {
-                    // 计算吞吐量加速比
-                    const throughputSpeedup = value / props.payload.cpuThroughput;
-                    return [
-                      <span>
-                        {Number(value).toFixed(3)} {getThroughputUnit(props.payload.algorithm)}<br/>
-                        <Box sx={{ height: 12 }} />
-                        <span style={{color: '#CC556A', fontWeight: 'bold'}}>吞吐量加速比: {throughputSpeedup.toFixed(3)}</span>
-                      </span>,
-                      name
-                    ];
-                  }
-                }
-                if (chartMetric === 'time' && name === "CPU（Intel Xeon Gold 6338）时间") {
-                  return [Number(value).toFixed(3), name];
-                }
-                if (chartMetric === 'time' && name === "加速器时间") {
-                  const speedUp = props.payload.cpu / value;
-                  return [
-                    <span>
-                      {Number(value).toFixed(3)}<br/>
-                      <Box sx={{ height: 12 }} />
-                      <span style={{color: '#CC556A', fontWeight: 'bold'}}>加速比: {speedUp.toFixed(3)}</span>
-                    </span>, 
-                    name
-                  ];
-                }
-                return [value, name];
-              }}
-              labelFormatter={(label, payload) => {
-                if (payload && payload[0] && payload[0].payload) {
-                  return payload[0].payload.fullName;
-                }
-                return label;
-              }}
-            />
-            <Legend 
-              wrapperStyle={{ paddingTop: '10px' }}
-              formatter={(value, entry, index) => (
-                <span style={{ marginRight: index === 0 ? '100px' : '0px' }}>
-                  {value}
-                </span>
-              )}
-            />
-
-            {chartMetric === 'time' && (
-                <>
-                    <Bar
-                        dataKey="cpu"
-                        fill="#7f58af"
-                        name="CPU（Intel Xeon Gold 6338）时间"
-                        barSize={50}
-                        style={{ marginRight: '20px' }}
+                    width={800}
+                    height={300}
+                    data={getChartData()}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+                    onMouseEnter={() => setShowReferenceLine(true)}
+                    onMouseLeave={() => setShowReferenceLine(false)}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="displayName" />
+                    <YAxis 
+                      label={{ 
+                        value: chartMetric === 'time' ? '执行时间 (s)' : `吞吐量 (${getThroughputUnit(selectedAlgo)})`, 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        offset: -5,
+                        style: { fill: 'black'}
+                      }} 
                     />
-                    <Bar
-                        dataKey="accelerator"
-                        fill="#64b5f6"
-                        name="加速器时间"
-                        barSize={50}
-                        style={{ marginLeft: '20px' }}
+                    <Tooltip 
+                      formatter={(value, name, props) => {
+                        const systemName = selectedAlgo === 'PageRank' ? 'Ligra' : selectedAlgo === 'k-Clique' ? 'GraphPi' : 'PyG';
+                        if (chartMetric === 'throughput') {
+                          if (name.includes('CPU')) {
+                            return [`${Number(value).toFixed(3)} ${getThroughputUnit(props.payload.algorithm)}`, systemName];
+                          }
+                          if (name === "加速器吞吐量") {
+                            // 计算吞吐量加速比
+                            const throughputSpeedup = value / props.payload.cpuThroughput;
+                            return [
+                              <span>
+                                {Number(value).toFixed(3)} {getThroughputUnit(props.payload.algorithm)}<br/>
+                                <Box sx={{ height: 12 }} />
+                                <span style={{color: '#CC556A', fontWeight: 'bold'}}>加速比: {throughputSpeedup.toFixed(3)}x</span>
+                              </span>,
+                              "加速器"
+                            ];
+                          }
+                        }
+                        if (chartMetric === 'time') {
+                          if (name.includes('CPU')) {
+                            return [`${Number(value).toFixed(3)}s`, systemName];
+                          }
+                          if (name === "加速器时间") {
+                            const speedUp = props.payload.cpu / value;
+                            return [
+                              <span>
+                                {Number(value).toFixed(3)}s<br/>
+                                <Box sx={{ height: 12 }} />
+                                <span style={{color: '#CC556A', fontWeight: 'bold'}}>加速比: {speedUp.toFixed(3)}x</span>
+                              </span>, 
+                              "加速器"
+                            ];
+                          }
+                        }
+                        return [value, name];
+                      }}
+                      labelFormatter={(label, payload) => {
+                        if (payload && payload[0] && payload[0].payload) {
+                          return payload[0].payload.fullName;
+                        }
+                        return label;
+                      }}
                     />
-                </>
-            )}
+                    <Legend 
+                      wrapperStyle={{ paddingTop: '10px' }}
+                      formatter={(value, entry, index) => (
+                        <span style={{ marginRight: index === 0 ? '100px' : '0px' }}>
+                          {value}
+                        </span>
+                      )}
+                    />
 
-            {chartMetric === 'throughput' && (
-              <>
-                <Bar
-                  dataKey="cpuThroughput"
-                  fill="#9e9e9e"
-                  name="CPU（Intel Xeon Gold 6338）吞吐量"
-                  barSize={50}
-                  onMouseEnter={() => setShowReferenceLine(true)}
-                  onMouseLeave={() => setShowReferenceLine(false)}
-                />
-                <Bar
-                  dataKey="throughput"
-                  fill="#26a69a"
-                  name="加速器吞吐量"
-                  barSize={50}
-                  onMouseEnter={() => setShowReferenceLine(true)}
-                  onMouseLeave={() => setShowReferenceLine(false)}
-                />
-                <Tooltip 
-                  formatter={(value, name, props) => {
-                    if (name === "CPU（Intel Xeon Gold 6338）吞吐量") {
-                      return [`${Number(value).toFixed(3)} ${getThroughputUnit(props.payload.algorithm)}`, name];
-                    }
-                    if (name === "加速器吞吐量") {
-                      // 计算吞吐量加速比
-                      const throughputSpeedup = value / props.payload.cpuThroughput;
-                      return [
-                        <span>
-                          {Number(value).toFixed(3)} {getThroughputUnit(props.payload.algorithm)}<br/>
-                          <Box sx={{ height: 12 }} />
-                          <span style={{color: '#CC556A', fontWeight: 'bold'}}>吞吐量加速比: {throughputSpeedup.toFixed(3)}</span>
-                        </span>,
-                        name
-                      ];
-                    }
-                    return [value, name];
-                  }}
-                />
-                <ReferenceLine
-                  y={midtermMetrics[selectedAlgo]}
-                  stroke="red"
-                  strokeDasharray="3 3"
-                  strokeOpacity={showReferenceLine ? 1 : 0}
-                  style={{
-                    opacity: showReferenceLine ? 1 : 0,
-                    transition: 'opacity 0.3s ease-in-out'
-                  }}
-                  label={{
-                    value: `中期指标\n(${midtermMetrics[selectedAlgo]} ${getThroughputUnit(selectedAlgo)})`,
-                    position: 'insideRight',
-                    fill: 'red',
-                    fontSize: 14,
-                    fontWeight: 'bold', 
-                    dy: -10,
-                    opacity: showReferenceLine ? 1 : 0,
-                    transition: 'opacity 0.3s'
-                  }}
-                />
-              </>
-            )}
+                    {chartMetric === 'time' && (
+                        <>
+                            <Bar
+                                dataKey="cpu"
+                                fill="#7f58af"
+                                name={`${selectedAlgo === 'PageRank' ? 'Ligra' : selectedAlgo === 'k-Clique' ? 'GraphPi' : 'PyG'}（Intel Xeon Gold 6338 CPU）时间`}
+                                barSize={50}
+                                style={{ marginRight: '20px' }}
+                            />
+                            <Bar
+                                dataKey="accelerator"
+                                fill="#64b5f6"
+                                name="加速器时间"
+                                barSize={50}
+                                style={{ marginLeft: '20px' }}
+                            />
+                        </>
+                    )}
 
-        </BarChart>
+                    {chartMetric === 'throughput' && (
+                      <>
+                        <Bar
+                          dataKey="cpuThroughput"
+                          fill="#9e9e9e"
+                          name={`${selectedAlgo === 'PageRank' ? 'Ligra' : selectedAlgo === 'k-Clique' ? 'GraphPi' : 'PyG'}（Intel Xeon Gold 6338 CPU）吞吐量`}
+                          barSize={50}
+                          onMouseEnter={() => setShowReferenceLine(true)}
+                          onMouseLeave={() => setShowReferenceLine(false)}
+                        />
+                        <Bar
+                          dataKey="throughput"
+                          fill="#26a69a"
+                          name="加速器吞吐量"
+                          barSize={50}
+                          onMouseEnter={() => setShowReferenceLine(true)}
+                          onMouseLeave={() => setShowReferenceLine(false)}
+                        />
+                        <ReferenceLine
+                          y={midtermMetrics[selectedAlgo]}
+                          stroke="red"
+                          strokeDasharray="3 3"
+                          strokeOpacity={showReferenceLine ? 1 : 0}
+                          style={{
+                            opacity: showReferenceLine ? 1 : 0,
+                            transition: 'opacity 0.3s ease-in-out'
+                          }}
+                          label={{
+                            value: `中期指标\n(${midtermMetrics[selectedAlgo]} ${getThroughputUnit(selectedAlgo)})`,
+                            position: 'insideRight',
+                            fill: 'red',
+                            fontSize: 14,
+                            fontWeight: 'bold', 
+                            dy: -10,
+                            opacity: showReferenceLine ? 1 : 0,
+                            transition: 'opacity 0.3s'
+                          }}
+                        />
+                      </>
+                    )}
+
+                  </BarChart>
                 </Box>
               )}
             </Paper>

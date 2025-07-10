@@ -171,13 +171,14 @@ const ChartDisplay = ({
             />
             <Legend
               verticalAlign="bottom"
-              height={36}
+              height={100}
               wrapperStyle={{ 
                 fontSize: '14px', 
                 paddingTop: '10px',
-                color: 'black',
-                // fontWeight: 'bold'
+                color: 'black'
               }}
+              layout="vertical"
+              align="center"
             />
             {/* 对于特定算法和RMAT数据集，显示CPU和GPU功耗比 */}
             {(() => {
@@ -194,7 +195,7 @@ const ChartDisplay = ({
                     fill="#9e9e9e"
                     radius={[4, 4, 0, 0]}
                     barSize={40}
-                    name={'CPU功耗比'}
+                    name={`${selectedAlgorithm === 'ppr' ? 'Ligra' : selectedAlgorithm === 'kclique' ? 'GraphPi' : 'PyG'}（Intel Xeon Gold 6338 CPU）`}
                     label={{
                       position: 'top',
                       formatter: (value) => value ? value.toFixed(4) : '0.0000'
@@ -207,7 +208,7 @@ const ChartDisplay = ({
                     fill="#ff9800"
                     radius={[4, 4, 0, 0]}
                     barSize={40}
-                    name={'GPU功耗比'}
+                    name={`${selectedAlgorithm === 'gcn' ? 'PyG' : 'Gunrock'}（NVIDIA A100 GPU）`}
                     label={{
                       position: 'top',
                       formatter: (value) => value ? value.toFixed(4) : '0.0000'
@@ -221,7 +222,7 @@ const ChartDisplay = ({
             <Bar
               dataKey="consumption"
               fill="#1976d2"
-              name={'加速器功耗比'}
+              name="图计算加速卡模拟器"
               radius={[4, 4, 0, 0]}
               barSize={40}
               label={{
@@ -289,12 +290,14 @@ const ChartDisplay = ({
             />
             <Legend
               verticalAlign="bottom"
-              height={36}
+              height={100}
               wrapperStyle={{ 
                 fontSize: '14px', 
                 paddingTop: '10px',
                 color: 'black'
               }}
+              layout="vertical"
+              align="center"
             />
             {/* 对于特定算法和RMAT数据集，显示CPU和GPU性能 */}
             {(() => {
@@ -317,7 +320,7 @@ const ChartDisplay = ({
                     fill="#9e9e9e"
                     radius={[4, 4, 0, 0]}
                     barSize={40}
-                    name={'CPU性能值'}
+                    name={`${selectedAlgorithm === 'ppr' ? 'Ligra' : selectedAlgorithm === 'kclique' ? 'GraphPi' : 'PyG'}（Intel Xeon Gold 6338 CPU）`}
                     label={{
                       position: 'top',
                       formatter: (value) => value.toFixed(4)
@@ -330,7 +333,7 @@ const ChartDisplay = ({
                     fill="#ff9800"
                     radius={[4, 4, 0, 0]}
                     barSize={40}
-                    name={'GPU性能值'}
+                    name={`${selectedAlgorithm === 'gcn' ? 'PyG' : 'Gunrock'}（NVIDIA A100 GPU）`}
                     label={{
                       position: 'top',
                       formatter: (value) => value.toFixed(4)
@@ -346,7 +349,7 @@ const ChartDisplay = ({
               fill="#1976d2"
               radius={[4, 4, 0, 0]}
               barSize={40}
-              name={'加速器性能值'}
+              name="图计算加速卡模拟器"
               label={{
                 position: 'top',
                 formatter: (value) => value.toFixed(4)
