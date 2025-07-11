@@ -181,14 +181,50 @@ const CodeDisplay = ({
   const [isSaving, setIsSaving] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
+  const [parentHeight, setParentHeight] = useState(0);  // 添加父容器高度状态
   const originalCodeRef = useRef(code);
   const textareaRef = useRef(null);
   const highlightRef = useRef(null);
   const containerRef = useRef(null);
+  const resizeObserverRef = useRef(null);  // 添加ResizeObserver引用
+
+  // 设置ResizeObserver来监听父容器大小变化
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // 获取Paper容器（向上查找到Paper组件）
+    const findPaperContainer = (element) => {
+      while (element && !element.classList.contains('MuiPaper-root')) {
+        element = element.parentElement;
+      }
+      return element;
+    };
+
+    const paperContainer = findPaperContainer(containerRef.current);
+    if (!paperContainer) return;
+
+    console.log('Found Paper container:', paperContainer);
+
+    resizeObserverRef.current = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.contentRect.height;
+        console.log('Paper container height:', height);
+        setParentHeight(height);
+      }
+    });
+
+    resizeObserverRef.current.observe(paperContainer);
+
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+      }
+    };
+  }, []);
 
   // 计算编辑器高度
   const calculateEditorHeight = () => {
-    if (!editedCode || !containerRef.current) return;
+    if (!editedCode || !containerRef.current || !parentHeight) return;
     
     // 创建临时元素来测量文本高度
     const tempDiv = document.createElement('div');
@@ -204,17 +240,17 @@ const CodeDisplay = ({
     document.body.appendChild(tempDiv);
     
     // 计算内容高度并添加一些额外空间
-    // const contentHeight = tempDiv.clientHeight + 32; // 加上padding
     const contentHeight = tempDiv.clientHeight + 3; 
 
     document.body.removeChild(tempDiv);
     
-    // 设置最小和最大高度限制
-    // const minHeight = 80; // 最小高度
-    const maxHeight = 550; // 最大高度
-    // const calculatedHeight = Math.max(minHeight, Math.min(contentHeight, maxHeight));
-    const calculatedHeight = Math.min(contentHeight, maxHeight);
+    // 设置最大高度限制
+    const maxHeight = Math.min(550, parentHeight - 150); // 取固定值和父容器高度的最小值
 
+    // 如果内容高度超过最大高度，则使用最大高度，否则使用内容高度
+    const calculatedHeight = Math.min(contentHeight, maxHeight);
+    
+    console.log('Parent & calculated height:', parentHeight, calculatedHeight);
     
     setEditorHeight(`${calculatedHeight}px`);
   };
@@ -332,6 +368,13 @@ const CodeDisplay = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // 当父容器高度变化时重新计算编辑器高度
+  useEffect(() => {
+    if (parentHeight > 0) {
+      calculateEditorHeight();
+    }
+  }, [parentHeight]);
 
   // 检查代码是否被修改
   useEffect(() => {
